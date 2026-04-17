@@ -1,0 +1,371 @@
+/* ============================================================================
+   LANDING PAGE — Svarajya Brand Colors & Custom Animations
+   Culturally-inspired design system with Indian financial governance theme
+   ============================================================================ */
+
+@theme {
+  /* ——— Svarajya Landing Color Palette ——— */
+  /* All colors have symbolic meaning in Indian culture */
+  --color-svarajya-blue: #1F3A5F;       /* Authority, trust, governance */
+  --color-mudra-gold: #C6A24F;          /* Prosperity, success, wealth */
+  --color-palm-green: #4C6B4E;          /* Growth, achievement, completion */
+  --color-river-teal: #2F6F73;          /* Trust, stability, flow */
+  --color-matka-clay: #B56A3F;          /* Warnings, attention, earthiness */
+  --color-fort-stone: #2E2E2E;          /* Primary text, strength */
+  --color-parchment: #F4F1E8;           /* Background, warmth, tradition */
+  --color-card-white: #FFFFFF;          /* Cards, clarity, white space */
+  --color-parchment-dark: #E8E4D9;      /* Secondary background, borders */
+  
+  /* ——— Fonts ——— */
+  --font-serif: 'Playfair Display', Georgia, serif;      /* Headings */
+  --font-mono: 'Roboto Mono', 'Courier New', monospace;  /* Financial numbers */
+}
+
+/* ============================================================================
+   BASE STYLES
+   ============================================================================ */
+
+html {
+  scroll-behavior: smooth;
+}
+
+/* Devanagari Font Support for Hindi & Marathi */
+.font-devanagari {
+  font-family: 'Noto Sans Devanagari', 'Mangal', 'Inter', sans-serif;
+  font-size: 1.05em;
+}
+
+/* Auto-apply Devanagari font when language is Hindi or Marathi */
+html[lang="hi"] body,
+html[lang="mr"] body {
+  font-family: 'Noto Sans Devanagari', 'Inter', system-ui, sans-serif;
+  line-height: 1.7;
+}
+
+html[lang="hi"] h1, html[lang="hi"] h2, html[lang="hi"] h3,
+html[lang="mr"] h1, html[lang="mr"] h2, html[lang="mr"] h3 {
+  line-height: 1.4;
+}
+
+html[lang="hi"] .heading-h1, html[lang="hi"] .heading-h2, html[lang="hi"] .heading-h3,
+html[lang="mr"] .heading-h1, html[lang="mr"] .heading-h2, html[lang="mr"] .heading-h3 {
+  font-family: 'Noto Sans Devanagari', 'Playfair Display', Georgia, serif;
+}
+
+html[lang="hi"] .quote-text,
+html[lang="mr"] .quote-text {
+  font-family: 'Noto Sans Devanagari', 'Playfair Display', Georgia, serif;
+  font-style: normal;
+}
+
+/* ============================================================================
+   TYPOGRAPHY HIERARCHY
+   ============================================================================ */
+
+.heading-h1 {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.heading-h2 {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.heading-h3 {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.body-text {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+.caption-text {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+.button-text {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+.financial-data {
+  font-family: 'Roboto Mono', 'Courier New', monospace;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+.zone-name {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-weight: 600;
+}
+
+.quote-text {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-style: italic;
+  font-weight: 600;
+}
+
+/* ============================================================================
+   SCROLLBAR STYLING
+   ============================================================================ */
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #F4F1E8;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #C6A24F;
+  border-radius: 3px;
+}
+
+/* ============================================================================
+   ANIMATIONS
+   ============================================================================ */
+
+/* Gold shimmer animation */
+@keyframes shimmer {
+  0% {
+    background-position: -200% center;
+  }
+  100% {
+    background-position: 200% center;
+  }
+}
+
+.gold-shimmer {
+  background: linear-gradient(
+    90deg,
+    #C6A24F 0%,
+    #D4B76A 25%,
+    #E8D090 50%,
+    #D4B76A 75%,
+    #C6A24F 100%
+  );
+  background-size: 200% auto;
+  animation: shimmer 3s linear infinite;
+}
+
+/* Seal stamp animation */
+@keyframes stamp {
+  0% {
+    transform: scale(2) rotate(-10deg);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(0.9) rotate(2deg);
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
+}
+
+.seal-stamp {
+  animation: stamp 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+/* Badge pulse animation */
+@keyframes badge-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(198, 162, 79, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 12px rgba(198, 162, 79, 0);
+  }
+}
+
+.badge-glow {
+  animation: badge-pulse 2s ease-in-out infinite;
+}
+
+/* Zone completion glow */
+@keyframes glow {
+  0%, 100% {
+    box-shadow: 0 0 5px rgba(198, 162, 79, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(198, 162, 79, 0.5);
+  }
+}
+
+.zone-complete {
+  animation: glow 2s ease-in-out infinite;
+}
+
+/* Scroll reveal animation */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.6s ease-out forwards;
+}
+
+/* Stagger children animation */
+.stagger-children > * {
+  opacity: 0;
+  animation: fadeInUp 0.4s ease-out forwards;
+}
+
+.stagger-children > *:nth-child(1) { animation-delay: 0.1s; }
+.stagger-children > *:nth-child(2) { animation-delay: 0.2s; }
+.stagger-children > *:nth-child(3) { animation-delay: 0.3s; }
+.stagger-children > *:nth-child(4) { animation-delay: 0.4s; }
+.stagger-children > *:nth-child(5) { animation-delay: 0.5s; }
+.stagger-children > *:nth-child(6) { animation-delay: 0.6s; }
+
+/* Hero background animation */
+@keyframes hero-gradient {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+.hero-gradient-bg {
+  background: linear-gradient(
+    135deg,
+    #F4F1E8 0%,
+    #F8F5EC 25%,
+    #F4F1E8 50%,
+    #EFE9DA 75%,
+    #F4F1E8 100%
+  );
+  background-size: 400% 400%;
+  animation: hero-gradient 15s ease infinite;
+}
+
+/* Button shimmer hover effect */
+@keyframes button-shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.gold-button-shimmer::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.2) 50%,
+    transparent 100%
+  );
+  transform: translateX(-100%);
+}
+
+.gold-button-shimmer:hover::before {
+  animation: button-shimmer 0.6s ease-out;
+}
+
+/* Loading skeleton pulse */
+@keyframes skeleton-pulse {
+  0%, 100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+
+.skeleton-pulse {
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
+}
+
+/* ============================================================================
+   UI UTILITIES
+   ============================================================================ */
+
+/* Temple line decoration */
+.temple-line {
+  background: linear-gradient(90deg, transparent 0%, #C6A24F 10%, #C6A24F 90%, transparent 100%);
+  height: 1px;
+  opacity: 0.4;
+}
+
+/* Parchment texture overlay */
+.parchment-texture {
+  background-image: 
+    radial-gradient(ellipse at 20% 30%, rgba(198, 162, 79, 0.03) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 70%, rgba(47, 111, 115, 0.02) 0%, transparent 50%);
+}
+
+/* Focus styles for accessibility */
+.focus-ring:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(198, 162, 79, 0.4);
+}
+
+/* Smooth scroll snap */
+.scroll-snap-y {
+  scroll-snap-type: y proximity;
+}
+
+.scroll-snap-start {
+  scroll-snap-align: start;
+}
+
+/* Card hover lift */
+.card-hover-lift {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.card-hover-lift:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.1);
+}
+
+/* Text gradient */
+.text-gradient-gold {
+  background: linear-gradient(135deg, #C6A24F 0%, #D4B76A 50%, #C6A24F 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Hide scrollbar utility - for modals and overlays */
+.hide-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;  /* Chrome, Safari and Opera */
+}

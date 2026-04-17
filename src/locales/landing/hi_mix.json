@@ -1,0 +1,295 @@
+{
+  "nav": {
+    "home": "होम",
+    "map": "Svarajya Map",
+    "story": "कहानी",
+    "features": "Features",
+    "login": "Login"
+  },
+  "hero": {
+    "headline": "एक Platform. संपूर्ण Financial Clarity.",
+    "subheadline": "खर्च, subscriptions, insurance, loans और परिवार की finances को track करें — सुरक्षित रूप से एक intelligent system में।",
+    "benefits": {
+      "subscriptions": "सभी subscriptions एक जगह देखें",
+      "family": "परिवार के साथ सुरक्षित रूप से finances share करें",
+      "tracking": "कर्ज़, insurance और बचत track करें",
+      "chaos": "वित्तीय अव्यवस्था कम करें"
+    },
+    "primaryCta": "मेरा Svarajya बनाएं — मुफ़्त",
+    "secondaryCta": "देखें कैसे काम करता है",
+    "noCreditCard": "Credit card की ज़रूरत नहीं"
+  },
+  "problem": {
+    "badge": "चुनौती",
+    "title": "आधुनिक Finances बिखरी हुई हैं",
+    "intro": "Subscriptions चुपचाप renew होते हैं। Insurance details खो जाती हैं। परिवार के सदस्य अनजान रहते हैं। वित्तीय तनाव धीरे-धीरे बढ़ता है।",
+    "cards": {
+      "subscriptions": {
+        "title": "Subscriptions का रिसाव",
+        "points": [
+          "बिना जानकारी के छोटी रकम खर्च होती है",
+          "Recurring charges अनदेखे रहते हैं",
+          "कोष धीरे-धीरे कमज़ोर होता है"
+        ],
+        "quote": "जो नहीं देखा जाता, उसे नियंत्रित नहीं किया जा सकता।"
+      },
+      "insurance": {
+        "title": "Insurance बिखरा हुआ",
+        "points": [
+          "बिना ढांचे के सुरक्षा",
+          "Policies अलग-अलग जगह रखी हैं",
+          "झूठी सुरक्षा का भ्रम"
+        ],
+        "quote": "अनदेखी दरारों वाला किला रक्षा नहीं कर सकता।"
+      },
+      "family": {
+        "title": "परिवार अनजान",
+        "points": [
+          "ज़िम्मेदारियां अस्पष्ट रहती हैं",
+          "वित्तीय जानकारी share नहीं होती",
+          "ज़रूरत के समय भ्रम होता है"
+        ],
+        "quote": "ज्ञान में बंटा राज्य, शक्ति में भी बंटा होता है।"
+      }
+    },
+    "closing": "घर को स्पष्टता से शासित किया जाना चाहिए, जल्दबाज़ी में प्रबंधित नहीं।"
+  },
+  "howItWorks": {
+    "badge": "कैसे काम करता है",
+    "title": "Svarajya कैसे व्यवस्था लाता है",
+    "steps": {
+      "step1": {
+        "title": "अपना Svarajya बनाएं",
+        "description": "मिनटों में अपना financial kingdom setup करें। नियंत्रित access के साथ परिवार के सदस्यों को जोड़ें।"
+      },
+      "step2": {
+        "title": "अपना Financial Data जोड़ें",
+        "description": "Subscriptions, insurance policies, loans, savings, और महत्वपूर्ण documents को link करें।"
+      },
+      "step3": {
+        "title": "संपूर्ण स्पष्टता पाएं",
+        "description": "सब कुछ एक dashboard में देखें। Insights, alerts, और पूरे परिवार की visibility पाएं।"
+      }
+    }
+  },
+  "solution": {
+    "badge": "समाधान",
+    "title": "आपकी Finances एक राज्य है। बुद्धिमानी से शासन करें।",
+    "intro": "चाणक्य ने सिखाया कि एक मज़बूत राज्य सुरक्षा, अनुशासित खर्च और संरक्षित कोष पर टिका होता है। आपका घर भी ऐसे ही।",
+    "zones": {
+      "raksha": {
+        "name": "रक्षा (किला)",
+        "subtitle": "Insurance & Protection",
+        "summary": "अनिश्चितता से अपने घर की रक्षा करें।",
+        "opening": "जो शासक सुरक्षा की उपेक्षा करता है, वह अनिश्चितता को आमंत्रित करता है। सुरक्षा डर नहीं है। यह तैयारी है।",
+        "governs": ["सभी Insurance policies एक जगह", "Emergency reserves tracking", "Coverage gaps की पहचान", "Household protection score"],
+        "strengthens": ["सभी policies को स्पष्ट रूप से देखें", "जानें कौन सी सुरक्षा कम है", "संकट से पहले कमज़ोर दीवारें मज़बूत करें"],
+        "closing": "मज़बूत किला शांतिपूर्ण विकास की अनुमति देता है।"
+      },
+      "vyaya": {
+        "name": "व्यय (मटका)",
+        "subtitle": "Expenses & Subscriptions",
+        "summary": "देखें आपका धन कहां जाता है।",
+        "opening": "धन अचानक गायब नहीं होता। यह अनदेखी धाराओं में बह जाता है।",
+        "governs": ["मासिक खर्च patterns", "छिपे subscriptions", "Category-wise outflow", "Flow imbalance signals"],
+        "strengthens": ["Visual expense mapping", "Leak detection insights", "सौम्य मासिक governance reminders"],
+        "closing": "अपने प्रवाह को देखें। नियंत्रण आएगा।"
+      },
+      "rin": {
+        "name": "ऋण (युद्धभूमि)",
+        "subtitle": "Loans & Debt",
+        "summary": "Strategy के साथ कर्ज़ प्रबंधित करें, तनाव से नहीं।",
+        "opening": "कर्ज़ दुश्मन नहीं है। Strategy की कमी है।",
+        "governs": ["Loan tracking", "Interest visibility", "Repayment planning", "Priority guidance"],
+        "strengthens": ["स्पष्ट payoff roadmap", "Progress visualization", "तनाव पर strategy"],
+        "closing": "विस्तार से पहले युद्ध जीतें।"
+      },
+      "kosh": {
+        "name": "कोष (खज़ाना)",
+        "subtitle": "Savings & Wealth",
+        "summary": "महत्वाकांक्षा से पहले reserves बनाएं।",
+        "opening": "कोई भी राज्य बिना reserves के नहीं बढ़ता।",
+        "governs": ["Savings visibility", "Investment overview", "Goal tracking", "Stability score"],
+        "strengthens": ["स्पष्ट treasury dashboard", "Long-term growth view", "Visibility से अनुशासन"],
+        "closing": "महत्वाकांक्षा से पहले reserves बनाएं।"
+      },
+      "mitra": {
+        "name": "मित्र (विरासत)",
+        "subtitle": "Nominees & Family Access",
+        "summary": "सुनिश्चित करें कि धन सही हाथों में पहुंचे।",
+        "opening": "बिना दिशा के धन भ्रम पैदा करता है।",
+        "governs": ["Nominee tracking", "Beneficiary clarity", "परिवार की जागरूकता", "उत्तराधिकार structure"],
+        "strengthens": ["सभी nominees का एक view", "भविष्य के विवाद टालें", "निश्चितता बनाएं"],
+        "closing": "आज की व्यवस्था कल के विवाद रोकती है।"
+      },
+      "granthagaar": {
+        "name": "ग्रंथागार (अभिलेख)",
+        "subtitle": "Documents & Records",
+        "summary": "Records में व्यवस्था मन की शांति लाती है।",
+        "opening": "Records मूक रक्षक हैं।",
+        "governs": ["Policy documents", "Loan agreements", "Investment files", "महत्वपूर्ण identity records"],
+        "strengthens": ["Secure document vault", "Categorized storage", "आसान retrieval"],
+        "closing": "व्यवस्था आत्मविश्वास लाती है।"
+      }
+    },
+    "cta": "इस Zone को मज़बूत करें"
+  },
+  "family": {
+    "badge": "परिवारों के लिए",
+    "title": "परिवारों के लिए बनाया गया",
+    "intro": "Svarajya भारतीय घरों के लिए designed है जहां वित्तीय निर्णय मिलकर लिए जाते हैं।",
+    "features": {
+      "sharing": {
+        "title": "परिवार के सदस्यों के साथ सुरक्षित रूप से Share करें",
+        "description": "पति/पत्नी, माता-पिता, या बच्चों को नियंत्रित access के साथ invite करें।"
+      },
+      "access": {
+        "title": "Role-Based Access Control",
+        "description": "तय करें कि कौन क्या देखे। Admins, viewers, या contributors।"
+      },
+      "tracking": {
+        "title": "Shared Expense Tracking",
+        "description": "पूर्ण पारदर्शिता के साथ मिलकर household expenses track करें।"
+      },
+      "nominees": {
+        "title": "Nominee Management",
+        "description": "सुनिश्चित करें कि सही लोगों को सही assets की जानकारी हो।"
+      }
+    }
+  },
+  "gamification": {
+    "badge": "यात्रा",
+    "title": "Progress Track करें। Financial अनुशासन बनाएं।",
+    "intro": "प्रगति को मापा जाना चाहिए, मान नहीं लेना चाहिए।",
+    "features": {
+      "chapters": {
+        "title": "Step-by-step financial chapters पूरे करें",
+        "description": "अपनी गति से structured lessons में आगे बढ़ें"
+      },
+      "strengthen": {
+        "title": "अपने Svarajya के हर zone को मज़बूत करें",
+        "description": "सुरक्षा बनाएं, खर्च प्रबंधित करें, कर्ज़ जीतें"
+      },
+      "recognition": {
+        "title": "निरंतरता से मान्यता अर्जित करें",
+        "description": "Badges आपकी governance milestones चिह्नित करते हैं"
+      },
+      "effort": {
+        "title": "निरंतर प्रयास स्थायी शक्ति बनाता है",
+        "description": "यह मनोरंजन नहीं है। यह structured सुधार है।"
+      }
+    },
+    "quote": "निरंतर प्रयास स्थायी शक्ति बनाता है।",
+    "badges": {
+      "founder": "Svarajya संस्थापक",
+      "guardian": "किला रक्षक",
+      "conqueror": "ऋण विजेता",
+      "master": "कोष स्वामी"
+    }
+  },
+  "security": {
+    "badge": "सुरक्षा",
+    "title": "Enterprise-Grade Security",
+    "intro": "आपका financial data सर्वोच्च सुरक्षा का हकदार है।",
+    "features": {
+      "encryption": {
+        "title": "End-to-End Encryption",
+        "description": "आपका financial data rest और transit में encrypted है।"
+      },
+      "cloud": {
+        "title": "Secure Cloud Infrastructure",
+        "description": "99.9% uptime के साथ enterprise-grade servers पर hosted।"
+      },
+      "access": {
+        "title": "Role-Based Access",
+        "description": "नियंत्रित करें कि आपके Svarajya में कौन क्या देखे।"
+      },
+      "logs": {
+        "title": "Activity Logs",
+        "description": "आपके account में की गई सभी actions की पूर्ण पारदर्शिता।"
+      },
+      "privacy": {
+        "title": "Privacy-First Architecture",
+        "description": "हम आपका financial data कभी नहीं बेचते। कभी नहीं।"
+      }
+    },
+    "statement": "हम आपका financial data कभी नहीं बेचते। कभी नहीं।"
+  },
+  "socialProof": {
+    "badge": "प्रशंसापत्र",
+    "title": "भारत भर के परिवारों द्वारा विश्वसनीय",
+    "testimonials": {
+      "testimonial1": {
+        "quote": "आखिरकार, एक platform जहां मेरा पूरा परिवार हमारी financial picture देख सकता है। बिखरी spreadsheets नहीं।",
+        "name": "शर्मा परिवार",
+        "location": "मुंबई"
+      },
+      "testimonial2": {
+        "quote": "मुझे पसंद है कि Svarajya सब कुछ कैसे organize करता है। Insurance, loans, subscriptions — सब एक जगह।",
+        "name": "प्रिया मेहता",
+        "location": "बैंगलोर"
+      },
+      "testimonial3": {
+        "quote": "Family sharing feature शानदार है। मेरे माता-पिता अब देख सकते हैं कि हम आर्थिक रूप से कहां खड़े हैं।",
+        "name": "राजेश कुमार",
+        "location": "दिल्ली"
+      }
+    }
+  },
+  "faq": {
+    "badge": "प्रश्न",
+    "title": "अक्सर पूछे जाने वाले प्रश्न",
+    "questions": {
+      "q1": {
+        "question": "Svarajya क्या है?",
+        "answer": "Svarajya एक family financial management platform है जो आपकी सभी finances — subscriptions, insurance, loans, savings, और documents — को एक secure, organized dashboard में लाता है।"
+      },
+      "q2": {
+        "question": "क्या Svarajya मुफ़्त है?",
+        "answer": "हां, Svarajya core features के साथ मुफ़्त plan देता है। Advanced features के साथ premium plans भी उपलब्ध हैं।"
+      },
+      "q3": {
+        "question": "क्या मेरे परिवार का data सुरक्षित है?",
+        "answer": "बिल्कुल। हम end-to-end encryption, secure cloud infrastructure, और role-based access controls का उपयोग करते हैं। हम आपका data कभी नहीं बेचते।"
+      },
+      "q4": {
+        "question": "मेरा data कहां store होता है?",
+        "answer": "आपका data 99.9% uptime और regular backups के साथ enterprise-grade cloud servers पर store होता है।"
+      },
+      "q5": {
+        "question": "क्या मैं कभी भी cancel कर सकता हूं?",
+        "answer": "हां, आप कभी भी अपनी subscription cancel कर सकते हैं। Cancellation के बाद 30 दिनों तक आपका data accessible रहता है।"
+      },
+      "q6": {
+        "question": "क्या कोई mobile app है?",
+        "answer": "Svarajya एक progressive web app (PWA) है जो mobile browsers पर शानदार काम करता है। Native apps जल्द आ रहे हैं।"
+      }
+    }
+  },
+  "finalCta": {
+    "title": "अपने परिवार की Finances पर नियंत्रण लें",
+    "subtitle": "Financial clarity बनाने वाले हज़ारों परिवारों में शामिल हों।",
+    "cta": "मुफ़्त शुरू करें — Credit Card नहीं चाहिए"
+  },
+  "footer": {
+    "tagline": "Svarajya स्पष्टता, अनुशासन, और दूरदर्शिता पर खड़ा है।",
+    "quote": "समृद्धि governance का अनुसरण करती है।",
+    "copyright": "© 2026 Svarajya. सर्वाधिकार सुरक्षित।",
+    "product": "Product",
+    "company": "Company",
+    "legal": "Legal",
+    "links": {
+      "features": "Features",
+      "map": "Svarajya Map",
+      "pricing": "Pricing",
+      "roadmap": "Roadmap",
+      "about": "About",
+      "blog": "Blog",
+      "careers": "Careers",
+      "contact": "Contact",
+      "privacy": "Privacy",
+      "terms": "Terms",
+      "security": "Security"
+    }
+  }
+}

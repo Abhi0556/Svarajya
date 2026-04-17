@@ -1,0 +1,295 @@
+{
+  "nav": {
+    "home": "Home",
+    "map": "Svarajya Map",
+    "story": "Story",
+    "features": "Features",
+    "login": "Login"
+  },
+  "hero": {
+    "headline": "One Platform. Complete Financial Clarity.",
+    "subheadline": "Track expenses, subscriptions, insurance, loans, and family finances — securely in one intelligent system.",
+    "benefits": {
+      "subscriptions": "See all subscriptions in one place",
+      "family": "Share finances securely with family",
+      "tracking": "Track debt, insurance & savings",
+      "chaos": "Reduce financial chaos"
+    },
+    "primaryCta": "Create My Svarajya (Free)",
+    "secondaryCta": "How It Works",
+    "noCreditCard": "No credit card required"
+  },
+  "problem": {
+    "badge": "The Challenge",
+    "title": "Modern Finances Are Fragmented",
+    "intro": "Subscriptions renew silently. Insurance details get lost. Family members stay unaware. Financial stress builds quietly.",
+    "cards": {
+      "subscriptions": {
+        "title": "Subscriptions Leak",
+        "points": [
+          "Small amounts spent without awareness",
+          "Recurring charges go unnoticed",
+          "Treasury weakens over time"
+        ],
+        "quote": "What is not observed cannot be controlled."
+      },
+      "insurance": {
+        "title": "Insurance Scattered",
+        "points": [
+          "Protection without structure",
+          "Policies stored in different places",
+          "False sense of security"
+        ],
+        "quote": "A fort with unseen cracks cannot defend."
+      },
+      "family": {
+        "title": "Family Unaware",
+        "points": [
+          "Responsibilities remain unclear",
+          "Financial knowledge not shared",
+          "Confusion in times of need"
+        ],
+        "quote": "A kingdom divided in knowledge is divided in strength."
+      }
+    },
+    "closing": "A household must be governed with clarity, not managed in haste."
+  },
+  "howItWorks": {
+    "badge": "How It Works",
+    "title": "How Svarajya Brings Order",
+    "steps": {
+      "step1": {
+        "title": "Create Your Svarajya",
+        "description": "Set up your financial kingdom in minutes. Add family members with controlled access."
+      },
+      "step2": {
+        "title": "Add Your Financial Data",
+        "description": "Link subscriptions, insurance policies, loans, savings, and important documents."
+      },
+      "step3": {
+        "title": "Gain Complete Clarity",
+        "description": "See everything in one dashboard. Get insights, alerts, and family-wide visibility."
+      }
+    }
+  },
+  "solution": {
+    "badge": "The Solution",
+    "title": "Your Finances Are a Kingdom. Govern Them Wisely.",
+    "intro": "Chanakya taught that a strong state rests on protection, disciplined spending, and a guarded treasury. So does a household.",
+    "zones": {
+      "raksha": {
+        "name": "Raksha (Fort)",
+        "subtitle": "Insurance & Protection",
+        "summary": "Guard your household against uncertainty.",
+        "opening": "A ruler who neglects protection invites uncertainty. Security is not fear. It is preparation.",
+        "governs": ["Insurance clarity in one place", "Emergency reserves tracking", "Coverage gaps identified calmly", "Protection score for your household"],
+        "strengthens": ["See all policies structured", "Know what is missing", "Strengthen weak walls before crisis"],
+        "closing": "A strong fort allows peaceful growth."
+      },
+      "vyaya": {
+        "name": "Vyaya (Matka)",
+        "subtitle": "Expenses & Subscriptions",
+        "summary": "Observe where wealth flows.",
+        "opening": "Wealth does not disappear suddenly. It flows away in unnoticed streams.",
+        "governs": ["Monthly spending patterns", "Silent subscriptions", "Category-wise outflow", "Flow imbalance signals"],
+        "strengthens": ["Visual expense mapping", "Leak detection insights", "Gentle monthly governance reminders"],
+        "closing": "Observe your flow. Control will follow."
+      },
+      "rin": {
+        "name": "Rin (Battlefield)",
+        "subtitle": "Loans & Debt",
+        "summary": "Debt managed with strategy, not stress.",
+        "opening": "Debt is not the enemy. Lack of strategy is.",
+        "governs": ["Loan tracking", "Interest visibility", "Repayment planning", "Priority guidance"],
+        "strengthens": ["Clear payoff roadmap", "Progress visualization", "Strategy over stress"],
+        "closing": "Win the battle before seeking expansion."
+      },
+      "kosh": {
+        "name": "Kosh (Treasury)",
+        "subtitle": "Savings & Wealth",
+        "summary": "Build reserves before ambition.",
+        "opening": "No kingdom grows without reserves.",
+        "governs": ["Savings visibility", "Investment overview", "Goal tracking", "Stability score"],
+        "strengthens": ["Clear treasury dashboard", "Long-term growth view", "Discipline through visibility"],
+        "closing": "Build reserves before ambition."
+      },
+      "mitra": {
+        "name": "Mitra (Legacy)",
+        "subtitle": "Nominees & Family Access",
+        "summary": "Ensure your wealth reaches the right hands.",
+        "opening": "Wealth without direction creates confusion.",
+        "governs": ["Nominee tracking", "Beneficiary clarity", "Family awareness", "Succession structure"],
+        "strengthens": ["One view of all nominees", "Avoid future disputes", "Create certainty"],
+        "closing": "Order today prevents conflict tomorrow."
+      },
+      "granthagaar": {
+        "name": "Granthagaar (Archive)",
+        "subtitle": "Documents & Records",
+        "summary": "Order in records creates peace of mind.",
+        "opening": "Records are silent protectors.",
+        "governs": ["Policy documents", "Loan agreements", "Investment files", "Important identity records"],
+        "strengthens": ["Secure document vault", "Categorized storage", "Easy retrieval"],
+        "closing": "Order brings confidence."
+      }
+    },
+    "cta": "Strengthen This Zone"
+  },
+  "family": {
+    "badge": "For Families",
+    "title": "Built for Families",
+    "intro": "Svarajya is designed for Indian households where financial decisions are shared.",
+    "features": {
+      "sharing": {
+        "title": "Share Securely with Family Members",
+        "description": "Invite spouse, parents, or children with controlled access."
+      },
+      "access": {
+        "title": "Role-Based Access Control",
+        "description": "Decide who sees what. Admins, viewers, or contributors."
+      },
+      "tracking": {
+        "title": "Shared Expense Tracking",
+        "description": "Track household expenses together with full transparency."
+      },
+      "nominees": {
+        "title": "Nominee Management",
+        "description": "Ensure the right people know about the right assets."
+      }
+    }
+  },
+  "gamification": {
+    "badge": "The Journey",
+    "title": "Track Progress. Build Financial Discipline.",
+    "intro": "Progress must be measured, not assumed.",
+    "features": {
+      "chapters": {
+        "title": "Complete financial chapters step by step",
+        "description": "Move through structured lessons at your own pace"
+      },
+      "strengthen": {
+        "title": "Strengthen each zone of your Svarajya",
+        "description": "Build protection, manage expenses, conquer debt"
+      },
+      "recognition": {
+        "title": "Earn recognition through consistency",
+        "description": "Badges mark your governance milestones"
+      },
+      "effort": {
+        "title": "Steady effort builds enduring strength",
+        "description": "This is not entertainment. It is structured improvement."
+      }
+    },
+    "quote": "Steady effort builds enduring strength.",
+    "badges": {
+      "founder": "Svarajya Founder",
+      "guardian": "Fort Guardian",
+      "conqueror": "Debt Conqueror",
+      "master": "Treasury Master"
+    }
+  },
+  "security": {
+    "badge": "Security",
+    "title": "Enterprise-Grade Security",
+    "intro": "Your financial data deserves the highest protection.",
+    "features": {
+      "encryption": {
+        "title": "End-to-End Encryption",
+        "description": "Your financial data is encrypted at rest and in transit."
+      },
+      "cloud": {
+        "title": "Secure Cloud Infrastructure",
+        "description": "Hosted on enterprise-grade servers with 99.9% uptime."
+      },
+      "access": {
+        "title": "Role-Based Access",
+        "description": "Control exactly who sees what in your Svarajya."
+      },
+      "logs": {
+        "title": "Activity Logs",
+        "description": "Full transparency of all actions taken in your account."
+      },
+      "privacy": {
+        "title": "Privacy-First Architecture",
+        "description": "We do not sell your financial data. Ever."
+      }
+    },
+    "statement": "We do not sell your financial data. Ever."
+  },
+  "socialProof": {
+    "badge": "Testimonials",
+    "title": "Trusted by Families Across India",
+    "testimonials": {
+      "testimonial1": {
+        "quote": "Finally, a platform where my entire family can see our financial picture. No more scattered spreadsheets.",
+        "name": "Sharma Family",
+        "location": "Mumbai"
+      },
+      "testimonial2": {
+        "quote": "I love how Svarajya organizes everything. Insurance, loans, subscriptions — all in one place.",
+        "name": "Priya Mehta",
+        "location": "Bangalore"
+      },
+      "testimonial3": {
+        "quote": "The family sharing feature is brilliant. My parents can finally see where we stand financially.",
+        "name": "Rajesh Kumar",
+        "location": "Delhi"
+      }
+    }
+  },
+  "faq": {
+    "badge": "FAQ",
+    "title": "Frequently Asked Questions",
+    "questions": {
+      "q1": {
+        "question": "What is Svarajya?",
+        "answer": "Svarajya is a family financial management platform that helps you track expenses, subscriptions, insurance, loans, and family finances in one secure place."
+      },
+      "q2": {
+        "question": "Is Svarajya free to use?",
+        "answer": "Yes, Svarajya offers a free plan with core features. Premium plans with advanced features are also available."
+      },
+      "q3": {
+        "question": "Is my family's data safe?",
+        "answer": "Absolutely. We use end-to-end encryption, secure cloud infrastructure, and role-based access controls. We never sell your data."
+      },
+      "q4": {
+        "question": "Where is my data stored?",
+        "answer": "Your data is stored on enterprise-grade cloud servers with 99.9% uptime and regular backups."
+      },
+      "q5": {
+        "question": "Can I cancel anytime?",
+        "answer": "Yes, you can cancel your subscription anytime. Your data remains accessible for 30 days after cancellation."
+      },
+      "q6": {
+        "question": "Is there a mobile app?",
+        "answer": "Svarajya is a progressive web app (PWA) that works beautifully on mobile browsers. Native apps are coming soon."
+      }
+    }
+  },
+  "finalCta": {
+    "title": "Take Control of Your Family's Finances",
+    "subtitle": "Join thousands of families building financial clarity.",
+    "cta": "Start Free — No Credit Card Needed"
+  },
+  "footer": {
+    "tagline": "Svarajya stands on clarity, discipline, and foresight.",
+    "quote": "Prosperity follows governance.",
+    "copyright": "© 2026 Svarajya. All rights reserved.",
+    "product": "Product",
+    "company": "Company",
+    "legal": "Legal",
+    "links": {
+      "features": "Features",
+      "map": "Svarajya Map",
+      "pricing": "Pricing",
+      "roadmap": "Roadmap",
+      "about": "About",
+      "blog": "Blog",
+      "careers": "Careers",
+      "contact": "Contact",
+      "privacy": "Privacy",
+      "terms": "Terms",
+      "security": "Security"
+    }
+  }
+}
