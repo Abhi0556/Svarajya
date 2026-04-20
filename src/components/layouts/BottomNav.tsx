@@ -1,12 +1,12 @@
-﻿"use client";
+"use client";
 
 import { useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { Home, Bell, Sun, Moon, FolderLock, User, MoreHorizontal, LayoutGrid, Settings, ShieldAlert, Cloud, HelpCircle, LogOut, Lock } from "lucide-react";
-import { NotificationStore } from "@/lib/stores/notificationStore";
-import { ThemeStore, ThemeMode } from "@/lib/stores/themeStore";
+import { NotificationStore } from "@/lib/notificationStore";
+import { ThemeStore, ThemeMode } from "@/lib/themeStore";
 import { createClient } from "@/lib/supabase/client";
-import { OnboardingStore } from "@/lib/stores/onboardingStore";
+import { OnboardingStore } from "@/lib/onboardingStore";
 
 // Primary tabs always visible
 const PRIMARY_TABS = [
@@ -59,7 +59,7 @@ export function BottomNav() {
             localStorage.removeItem("svarajya_treasury_v1");
             localStorage.removeItem("svarajya_onboarding_v1");
             localStorage.removeItem("svarajya_last_login");
-            // Hard redirect â€” forces middleware to re-evaluate auth after signOut
+            // Hard redirect — forces middleware to re-evaluate auth after signOut
             window.location.href = "/start";
         }
     };

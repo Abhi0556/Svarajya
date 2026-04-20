@@ -1,72 +1,130 @@
-import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { createClient } from '@/lib/supabase/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { incomeService } from '@/lib/services/incomeService';
+import { withAuth, getAuthContext, AuthLevel } from '@/lib/middleware/auth.middleware';
+import { withErrorHandler } from '@/lib/middleware/error.middleware';
+import {
+  successResponse,
+  errorResponse,
+  ErrorCodes,
+  StatusCodes,
+  handlePrismaError,
+} from '@/lib/middleware/standardResponse';
+import { IncomeStreamResponse, CreateIncomeRequest, UpdateIncomeRequest } from '@/lib/types/api.types';
 
-export async function GET() {
+/**
+ * GET /api/income
+ * Get all income streams for user
+ */
+async function GET(request: NextRequest): Promise<NextResponse> {
+  const authContext = getAuthContext(request);
+  if (!authContext) {
+    return errorResponse(
+      ErrorCodes.UNAUTHORIZED,
+      'Authentication required',
+      StatusCodes.UNAUTHORIZED
+    );
+  }
+
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const streams = await incomeService.getForUser(authContext.userId);
 
-    const profile = await prisma.userProfile.findUnique({ where: { authId: user.id } });
-    if (!profile) return NextResponse.json([]);
+    const responses: IncomeStreamResponse[] = streams.map((stream) => ({
+      id: stream.id,
+      userId: stream.userId,
+      type: stream.type,
+      source: stream.source,
+      frequency: stream.frequency,
+      amountGross: stream.amountGross,
+      deductions: stream.deductions,
+      amountNet: stream.amountNet,
+      creditedAccountId: stream.creditedAccountId,
+      isPrimary: stream.isPrimary,
+      createdAt: stream.createdAt.toISOString(),
+      updatedAt: stream.updatedAt.toISOString(),
+    }));
 
-    const income = await prisma.incomeEntry.findMany({
-      where: { profileId: profile.id },
-      orderBy: { date: 'desc' },
-      take: 100
-    });
-
-    return NextResponse.json(income);
+    return successResponse(responses);
   } catch (error) {
-    console.error("GET Income Error", error);
-    return NextResponse.json({ error: "Failed to fetch income entries" }, { status: 500 });
+    console.error('[Income GET]', error);
+    return handlePrismaError(error);
   }
 }
 
-export async function POST(request: Request) {
+/**
+ * POST /api/income
+ * Create or update income stream
+ */
+async function POST(request: NextRequest): Promise<NextResponse> {
+  const authContext = getAuthContext(request);
+  if (!authContext) {
+    return errorResponse(
+      ErrorCodes.UNAUTHORIZED,
+      'Authentication required',
+      StatusCodes.UNAUTHORIZED
+    );
+  }
+
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const data: CreateIncomeRequest | (UpdateIncomeRequest & { id?: string }) = await request.json();
 
-    const profile = await prisma.userProfile.findUnique({ where: { authId: user.id } });
-    if (!profile) return NextResponse.json({ error: "Profile not found" }, { status: 400 });
-
-    const data = await request.json();
-    
-    if (data.id) {
-      const updated = await prisma.incomeEntry.update({
-        where: { id: data.id, profileId: profile.id }, // Security enforcement
-        data: {
-          amount: data.amount,
-          date: new Date(data.date),
-          source: data.source,
-          isRecurring: data.isRecurring,
-          frequency: data.frequency,
-          creditAccountId: data.creditAccountId,
-          description: data.description,
-        }
-      });
-      return NextResponse.json(updated);
+    // Validate required fields
+    if (!data.type || !data.amountGross || data.amountNet === undefined) {
+      return errorResponse(
+        ErrorCodes.VALIDATION_ERROR,
+        'Type, amountGross, and amountNet are required',
+        StatusCodes.UNPROCESSABLE_ENTITY
+      );
     }
 
-    const created = await prisma.incomeEntry.create({
-      data: {
-        profileId: profile.id, // Enforce tenant isolation
-        accountId: data.accountId,
-        amount: data.amount,
-        date: new Date(data.date),
+    let stream;
+
+    if ('id' in data && data.id) {
+      // Update existing
+      stream = await incomeService.update(data.id, {
+        type: data.type,
         source: data.source,
-        isRecurring: data.isRecurring || false,
         frequency: data.frequency,
-        creditAccountId: data.creditAccountId,
-        description: data.description,
-      }
-    });
-    return NextResponse.json(created);
+        amountGross: data.amountGross,
+        deductions: data.deductions,
+        amountNet: data.amountNet,
+        creditedAccountId: data.creditedAccountId,
+        isPrimary: data.isPrimary,
+      });
+    } else {
+      // Create new
+      stream = await incomeService.createForUser(authContext.userId, {
+        type: data.type,
+        source: data.source,
+        frequency: data.frequency || 'MONTHLY',
+        amountGross: data.amountGross,
+        deductions: data.deductions,
+        amountNet: data.amountNet,
+        creditedAccountId: data.creditedAccountId,
+        isPrimary: data.isPrimary,
+      });
+    }
+
+    const response: IncomeStreamResponse = {
+      id: stream.id,
+      userId: stream.userId,
+      type: stream.type,
+      source: stream.source,
+      frequency: stream.frequency,
+      amountGross: stream.amountGross,
+      deductions: stream.deductions,
+      amountNet: stream.amountNet,
+      creditedAccountId: stream.creditedAccountId,
+      isPrimary: stream.isPrimary,
+      createdAt: stream.createdAt.toISOString(),
+      updatedAt: stream.updatedAt.toISOString(),
+    };
+
+    return successResponse(response, StatusCodes.CREATED);
   } catch (error) {
-    console.error("POST Income Error", error);
-    return NextResponse.json({ error: "Failed to processing income entry" }, { status: 500 });
+    console.error('[Income POST]', error);
+    return handlePrismaError(error);
   }
 }
+
+export const GET = withAuth(withErrorHandler(GET), AuthLevel.AUTHENTICATED);
+export const POST = withAuth(withErrorHandler(POST), AuthLevel.AUTHENTICATED);

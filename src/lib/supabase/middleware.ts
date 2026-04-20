@@ -38,9 +38,12 @@ export async function updateSession(request: NextRequest) {
   const isPublicRoute =
     request.nextUrl.pathname === '/' ||
     request.nextUrl.pathname.startsWith('/start') ||
-    request.nextUrl.pathname.startsWith('/intro') ||
+    request.nextUrl.pathname.startsWith('/callback') ||
+    request.nextUrl.pathname.startsWith('/reset-password') ||
+    request.nextUrl.pathname.startsWith('/verify-email') ||
+    request.nextUrl.pathname.startsWith('/intro-cinematic') ||
     request.nextUrl.pathname.startsWith('/login') ||
-    request.nextUrl.pathname.startsWith('/landing') ||
+    request.nextUrl.pathname.startsWith('/register') ||
     request.nextUrl.pathname.startsWith('/about') ||
     request.nextUrl.pathname.startsWith('/features') ||
     request.nextUrl.pathname.startsWith('/map') ||
@@ -48,22 +51,26 @@ export async function updateSession(request: NextRequest) {
     request.nextUrl.pathname.startsWith('/blog') ||
     request.nextUrl.pathname.startsWith('/careers') ||
     request.nextUrl.pathname.startsWith('/contact') ||
+    request.nextUrl.pathname.startsWith('/forget-password') ||
     request.nextUrl.pathname.startsWith('/privacy') ||
     request.nextUrl.pathname.startsWith('/terms') ||
     request.nextUrl.pathname.startsWith('/security') ||
     request.nextUrl.pathname.startsWith('/pricing') ||
+    request.nextUrl.pathname.startsWith('/customers-reviews') ||
+    request.nextUrl.pathname.startsWith('/partner-with-us') ||
     request.nextUrl.pathname.startsWith('/Svarajya/verification')
 
   if (!user && !isPublicRoute) {
     const url = request.nextUrl.clone()
     url.pathname = '/start'
+    url.searchParams.set('redirectTo', request.nextUrl.pathname)
     return NextResponse.redirect(url)
   }
 
-  // If user is logged in, but tries to access /start, redirect to dashboard
-  if (user && request.nextUrl.pathname.startsWith('/start')) {
+  // If user is logged in, but tries to access auth pages, redirect to dashboard
+  if (user && (request.nextUrl.pathname.startsWith('/start') || request.nextUrl.pathname.startsWith('/login'))) {
     const url = request.nextUrl.clone()
-    url.pathname = '/dashboard'
+    url.pathname = '/rajya'
     return NextResponse.redirect(url)
   }
 

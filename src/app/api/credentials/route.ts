@@ -1,101 +1,133 @@
-import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { createClient } from '@/lib/supabase/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { credentialService } from '@/lib/services/credentialService';
+import { withAuth, getAuthContext, AuthLevel } from '@/lib/middleware/auth.middleware';
+import { withErrorHandler } from '@/lib/middleware/error.middleware';
+import {
+  successResponse,
+  errorResponse,
+  ErrorCodes,
+  StatusCodes,
+  handlePrismaError,
+} from '@/lib/middleware/standardResponse';
+import { CredentialRecordResponse, CreateCredentialRecordRequest, UpdateCredentialRecordRequest } from '@/lib/types/api.types';
 
-export async function GET() {
+/**
+ * GET /api/credentials
+ * Get all credential records for user
+ */
+async function GET(request: NextRequest): Promise<NextResponse> {
+  const authContext = getAuthContext(request);
+  if (!authContext) {
+    return errorResponse(
+      ErrorCodes.UNAUTHORIZED,
+      'Authentication required',
+      StatusCodes.UNAUTHORIZED
+    );
+  }
+
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const records = await credentialService.getForUser(authContext.userId);
 
-    const profile = await prisma.userProfile.findUnique({ where: { authId: user.id } });
-    if (!profile) return NextResponse.json([]);
+    const responses: CredentialRecordResponse[] = records.map((record) => ({
+      id: record.id,
+      userId: record.userId,
+      portalType: record.portalType,
+      portalName: record.portalName,
+      portalUrl: record.portalUrl,
+      loginId: record.loginId,
+      registeredEmail: record.registeredEmail,
+      registeredMobile: record.registeredMobile,
+      storageMode: record.storageMode,
+      linkedMemberId: record.linkedMemberId,
+      registrationDate: record.registrationDate?.toISOString() || null,
+      createdAt: record.createdAt.toISOString(),
+      updatedAt: record.updatedAt.toISOString(),
+    }));
 
-    const portals = await prisma.portalCredential.findMany({
-      where: { profileId: profile.id },
-      orderBy: { createdAt: 'desc' }
-    });
-
-    return NextResponse.json(portals);
+    return successResponse(responses);
   } catch (error) {
-    console.error("GET Portals Error", error);
-    return NextResponse.json({ error: "Failed to fetch portals" }, { status: 500 });
+    console.error('[Credentials GET]', error);
+    return handlePrismaError(error);
   }
 }
 
-export async function POST(request: Request) {
+/**
+ * POST /api/credentials
+ * Create or update credential record
+ */
+async function POST(request: NextRequest): Promise<NextResponse> {
+  const authContext = getAuthContext(request);
+  if (!authContext) {
+    return errorResponse(
+      ErrorCodes.UNAUTHORIZED,
+      'Authentication required',
+      StatusCodes.UNAUTHORIZED
+    );
+  }
+
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const data: CreateCredentialRecordRequest | (UpdateCredentialRecordRequest & { id?: string }) = await request.json();
 
-    const profile = await prisma.userProfile.findUnique({ where: { authId: user.id } });
-    if (!profile) return NextResponse.json({ error: "Profile not found" }, { status: 400 });
-
-    const data = await request.json();
-    
-    if (data.id) {
-      const updated = await prisma.portalCredential.update({
-        where: { id: data.id, profileId: profile.id },
-        data: {
-            platformName: data.platformName,
-            category: data.category,
-            subcategory: data.subcategory,
-            websiteUrl: data.websiteUrl,
-            appLink: data.appLink,
-            loginId: data.loginId,
-            registeredMobileId: data.registeredMobileId,
-            registeredEmailId: data.registeredEmailId,
-            registrationDate: data.registrationDate ? new Date(data.registrationDate) : null,
-            linkedFamilyMemberId: data.linkedFamilyMemberId,
-            passwordStorageMode: data.passwordStorageMode,
-            encryptedPassword: data.encryptedPassword,
-            twoFAStatus: data.twoFAStatus,
-            twoFAType: data.twoFAType,
-            notes: data.notes,
-            lastReviewedDate: data.lastReviewedDate ? new Date(data.lastReviewedDate) : null,
-            bankName: data.bankName,
-            linkedBusinessEntity: data.linkedBusinessEntity,
-            linkedCA: data.linkedCA,
-            nomineeAwareness: data.nomineeAwareness,
-            renewalDate: data.renewalDate ? new Date(data.renewalDate) : null,
-            linkedAutoDebitBank: data.linkedAutoDebitBank
-        }
-      });
-      return NextResponse.json(updated);
+    // Validate required fields
+    if (!data.portalType || !data.portalName) {
+      return errorResponse(
+        ErrorCodes.VALIDATION_ERROR,
+        'Portal type and name are required',
+        StatusCodes.UNPROCESSABLE_ENTITY
+      );
     }
 
-    const created = await prisma.portalCredential.create({
-      data: {
-        profileId: profile.id,
-        platformName: data.platformName,
-        category: data.category,
-        subcategory: data.subcategory,
-        websiteUrl: data.websiteUrl,
-        appLink: data.appLink,
-        loginId: data.loginId,
-        registeredMobileId: data.registeredMobileId,
-        registeredEmailId: data.registeredEmailId,
-        registrationDate: data.registrationDate ? new Date(data.registrationDate) : null,
-        linkedFamilyMemberId: data.linkedFamilyMemberId,
-        passwordStorageMode: data.passwordStorageMode,
-        encryptedPassword: data.encryptedPassword,
-        twoFAStatus: data.twoFAStatus,
-        twoFAType: data.twoFAType,
-        notes: data.notes,
-        lastReviewedDate: data.lastReviewedDate ? new Date(data.lastReviewedDate) : null,
-        bankName: data.bankName,
-        linkedBusinessEntity: data.linkedBusinessEntity,
-        linkedCA: data.linkedCA,
-        nomineeAwareness: data.nomineeAwareness,
-        renewalDate: data.renewalDate ? new Date(data.renewalDate) : null,
-        linkedAutoDebitBank: data.linkedAutoDebitBank
-      }
-    });
+    let record;
 
-    return NextResponse.json(created);
+    if ('id' in data && data.id) {
+      // Update existing
+      record = await credentialService.update(data.id, {
+        portalName: data.portalName,
+        portalUrl: data.portalUrl,
+        loginId: data.loginId,
+        registeredEmail: data.registeredEmail,
+        registeredMobile: data.registeredMobile,
+        encryptedPassword: data.password,
+        linkedMemberId: data.linkedMemberId,
+      });
+    } else {
+      // Create new
+      record = await credentialService.createForUser(authContext.userId, {
+        portalType: data.portalType,
+        portalName: data.portalName,
+        portalUrl: data.portalUrl,
+        loginId: data.loginId,
+        registeredEmail: data.registeredEmail,
+        registeredMobile: data.registeredMobile,
+        storageMode: data.storageMode || 'REFERENCE',
+        encryptedPassword: data.password,
+        linkedMemberId: data.linkedMemberId,
+        registrationDate: data.registrationDate ? new Date(data.registrationDate) : undefined,
+      });
+    }
+
+    const response: CredentialRecordResponse = {
+      id: record.id,
+      userId: record.userId,
+      portalType: record.portalType,
+      portalName: record.portalName,
+      portalUrl: record.portalUrl,
+      loginId: record.loginId,
+      registeredEmail: record.registeredEmail,
+      registeredMobile: record.registeredMobile,
+      storageMode: record.storageMode,
+      linkedMemberId: record.linkedMemberId,
+      registrationDate: record.registrationDate?.toISOString() || null,
+      createdAt: record.createdAt.toISOString(),
+      updatedAt: record.updatedAt.toISOString(),
+    };
+
+    return successResponse(response, StatusCodes.CREATED);
   } catch (error) {
-    console.error("POST Portals Error", error);
-    return NextResponse.json({ error: "Failed to process portal credential" }, { status: 500 });
+    console.error('[Credentials POST]', error);
+    return handlePrismaError(error);
   }
 }
+
+export const GET = withAuth(withErrorHandler(GET), AuthLevel.AUTHENTICATED);
+export const POST = withAuth(withErrorHandler(POST), AuthLevel.AUTHENTICATED);

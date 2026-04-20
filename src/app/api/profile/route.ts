@@ -1,118 +1,133 @@
-import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { userService } from '@/lib/services/userService';
+import { withAuth, getAuthContext, AuthLevel } from '@/lib/middleware/auth.middleware';
+import { withErrorHandler } from '@/lib/middleware/error.middleware';
+import {
+  successResponse,
+  errorResponse,
+  ErrorCodes,
+  StatusCodes,
+  handlePrismaError,
+} from '@/lib/middleware/standardResponse';
+import { UserResponse, UpdateUserRequest } from '@/lib/types/api.types';
 
-function isDatabaseUnavailable(error: unknown) {
-  return !!error && typeof error === 'object' && 'code' in error && error.code === 'P1001';
-}
+/**
+ * GET /api/profile
+ * Get current user's profile
+ */
+async function GET(request: NextRequest): Promise<NextResponse> {
+  const authContext = getAuthContext(request);
+  if (!authContext) {
+    return errorResponse(
+      ErrorCodes.UNAUTHORIZED,
+      'Authentication required',
+      StatusCodes.UNAUTHORIZED
+    );
+  }
 
-export async function GET() {
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await userService.findById(authContext.userId);
 
     if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return errorResponse(
+        ErrorCodes.NOT_FOUND,
+        'User profile not found',
+        StatusCodes.NOT_FOUND
+      );
     }
 
-    let profile = await prisma.userProfile.findUnique({
-      where: { authId: user.id },
-      include: {
-        familyMembers: true
-      }
-    });
-    
-    // Fallback: If no profile by Auth UUID, check for a record with the same email
-    // This handles users who were created in the DB but not yet linked to Supabase Auth
-    if (!profile && user.email) {
-      profile = await prisma.userProfile.findUnique({
-        where: { email: user.email },
-        include: {
-          familyMembers: true
-        }
-      });
-      
-      // Auto-link the accounts if found
-      if (profile && !profile.authId) {
-        await prisma.userProfile.update({
-          where: { id: profile.id },
-          data: { authId: user.id }
-        });
-        console.log(`[API] Auto-linked existing profile ${profile.id} to authId ${user.id} via email ${user.email}`);
-      }
-    }
+    const response: UserResponse = {
+      id: user.id,
+      email: user.email,
+      phone: user.phone,
+      name: user.name,
+      dob: user.dob?.toISOString() || null,
+      gender: user.gender,
+      maritalStatus: user.maritalStatus,
+      occupationType: user.occupationType,
+      employerCompany: user.employerCompany,
+      profileType: user.profileType,
+      status: user.status,
+      language: user.language,
+      createdAt: user.createdAt.toISOString(),
+      updatedAt: user.updatedAt.toISOString(),
+    };
 
-    if (!profile) {
-      return NextResponse.json(null);
-    }
-    return NextResponse.json(profile);
+    return successResponse(response);
   } catch (error) {
-    if (isDatabaseUnavailable(error)) {
-      console.warn("GET Profile Warning: database temporarily unavailable");
-      return NextResponse.json(null);
-    }
-    console.error("GET Profile Error", error);
-    return NextResponse.json({ error: "Failed to fetch profile" }, { status: 500 });
+    console.error('[Profile GET]', error);
+    return handlePrismaError(error);
   }
 }
 
-export async function POST(request: Request) {
-  try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+/**
+ * POST /api/profile
+ * Create or update user profile
+ */
+async function POST(request: NextRequest): Promise<NextResponse> {
+  const authContext = getAuthContext(request);
+  if (!authContext) {
+    return errorResponse(
+      ErrorCodes.UNAUTHORIZED,
+      'Authentication required',
+      StatusCodes.UNAUTHORIZED
+    );
+  }
 
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  try {
+    const data: UpdateUserRequest = await request.json();
+
+    // Validate required fields
+    if (!data.name) {
+      return errorResponse(
+        ErrorCodes.VALIDATION_ERROR,
+        'Name is required',
+        StatusCodes.UNPROCESSABLE_ENTITY,
+        { field: 'name' }
+      );
     }
 
-    const data = await request.json();
-    
-    // Check if profile exists by Auth UUID or Email (linker)
-    let existing = await prisma.userProfile.findUnique({
-      where: { authId: user.id }
+    // Update user profile
+    const user = await userService.update(authContext.userId, {
+      name: data.name,
+      email: data.email,
+      phone: data.phone,
+      dob: data.dob ? new Date(data.dob) : undefined,
+      gender: data.gender,
+      maritalStatus: data.maritalStatus,
+      occupationType: data.occupationType,
+      employerCompany: data.employerCompany,
+      language: data.language,
     });
 
-    if (!existing && (data.email || user.email)) {
-        existing = await prisma.userProfile.findUnique({
-            where: { email: data.email || user.email }
-        });
-    }
-    
-    if (existing) {
-      const updated = await prisma.userProfile.update({
-        where: { id: existing.id },
-        data: {
-          fullName: data.fullName,
-          dob: data.dob ? new Date(data.dob) : null,
-          lifePhase: data.lifePhase,
-          maritalStatus: data.maritalStatus,
-          occupationType: data.occupationType,
-          occupationOther: data.occupationOther,
-          email: data.email,
-          mobile: data.mobile,
-          priority: data.priority,
-        }
-      });
-      return NextResponse.json(updated);
-    } else {
-      const created = await prisma.userProfile.create({
-        data: {
-          authId: user.id, // Link to Supabase Auth UUID
-          fullName: data.fullName,
-          dob: data.dob ? new Date(data.dob) : null,
-          lifePhase: data.lifePhase,
-          maritalStatus: data.maritalStatus,
-          occupationType: data.occupationType,
-          occupationOther: data.occupationOther,
-          email: data.email,
-          mobile: data.mobile,
-          priority: data.priority,
-        }
-      });
-      return NextResponse.json(created);
-    }
+    const response: UserResponse = {
+      id: user.id,
+      email: user.email,
+      phone: user.phone,
+      name: user.name,
+      dob: user.dob?.toISOString() || null,
+      gender: user.gender,
+      maritalStatus: user.maritalStatus,
+      occupationType: user.occupationType,
+      employerCompany: user.employerCompany,
+      profileType: user.profileType,
+      status: user.status,
+      language: user.language,
+      createdAt: user.createdAt.toISOString(),
+      updatedAt: user.updatedAt.toISOString(),
+    };
+
+    return successResponse(response, StatusCodes.CREATED, 'Profile updated');
   } catch (error) {
-    console.error("POST Profile Error", error);
-    return NextResponse.json({ error: "Failed to save profile" }, { status: 500 });
+    console.error('[Profile POST]', error);
+    return handlePrismaError(error);
   }
 }
+
+// Apply middleware
+export const GET = withAuth(withErrorHandler(GET), AuthLevel.AUTHENTICATED);
+export const POST = withAuth(
+  withErrorHandler(POST),
+  AuthLevel.AUTHENTICATED
+);

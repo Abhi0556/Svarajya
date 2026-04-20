@@ -117,7 +117,7 @@ export function Navbar() {
               </AnimatePresence>
             </div>
 
-            <Button variant="gold" size="sm" onClick={() => router.push('/login')}>
+            <Button variant="gold" size="sm" onClick={() => router.push('/start')}>
               {t('nav.login')}
             </Button>
           </div>
@@ -180,7 +180,7 @@ export function Navbar() {
               </button>
             ))}
             <div className="pt-4 border-t border-parchment-dark/30">
-              <Button variant="gold" className="w-full" onClick={() => router.push('/login')}>
+              <Button variant="gold" className="w-full" onClick={() => router.push('/start')}>
                 {t('nav.login')}
               </Button>
             </div>

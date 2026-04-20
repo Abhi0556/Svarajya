@@ -1,18 +1,18 @@
-﻿"use client";
+"use client";
 
 import { usePathname, useRouter } from "next/navigation";
 import {
     Home, Bell, FolderLock, Sun, Moon, LogOut, Coins,
     FileText, AlertTriangle
 } from "lucide-react";
-import { UserAvatar } from "@/components/shared/UserAvatar";
+import { UserAvatar } from "@/components/ui/UserAvatar";
 import { createClient } from "@/lib/supabase/client";
-import { OnboardingStore } from "@/lib/stores/onboardingStore";
-import { ThemeStore, ThemeMode } from "@/lib/stores/themeStore";
-import { NotificationStore } from "@/lib/stores/notificationStore";
+import { OnboardingStore } from "@/lib/onboardingStore";
+import { ThemeStore, ThemeMode } from "@/lib/themeStore";
+import { NotificationStore } from "@/lib/notificationStore";
 import { useState, useEffect } from "react";
-import { IncomeStore, formatRupee } from "@/lib/stores/incomeStore";
-import { IdentityStore } from "@/lib/stores/identityStore";
+import { IncomeStore, formatRupee } from "@/lib/incomeStore";
+import { IdentityStore } from "@/lib/identityStore";
 
 const HIDDEN_PATHS = ["/", "/start", "/intro"];
 
@@ -55,7 +55,7 @@ export function DesktopSidebar() {
     const alertCount = NotificationStore.getUnreadCount();
 
     const quickStats = [
-        { label: "Monthly Income", value: monthlyIncome > 0 ? formatRupee(monthlyIncome) : "â€”", icon: Coins, color: "text-emerald-400" },
+        { label: "Monthly Income", value: monthlyIncome > 0 ? formatRupee(monthlyIncome) : "—", icon: Coins, color: "text-emerald-400" },
         { label: "Identity Docs", value: docsCount > 0 ? `${docsCount} docs` : "None", icon: FileText, color: "text-amber-400" },
         { label: "Alerts", value: alertCount > 0 ? `${alertCount} pending` : "All clear", icon: AlertTriangle, color: alertCount > 0 ? "text-red-400" : "text-emerald-400" },
     ];
@@ -79,7 +79,7 @@ export function DesktopSidebar() {
                 <UserAvatar size="md" showName={true} />
             </div>
 
-            {/* Quick Stats â€” Kingdom Snapshot */}
+            {/* Quick Stats — Kingdom Snapshot */}
             {mounted && (
                 <div className="px-4 py-4 border-b border-white/8 space-y-2">
                     <p className="text-[9px] text-white/25 uppercase tracking-[0.15em] font-semibold px-1 mb-2">Kingdom Snapshot</p>
@@ -98,7 +98,7 @@ export function DesktopSidebar() {
                 </div>
             )}
 
-            {/* App Navigation â€” distinct from Mandal cards */}
+            {/* App Navigation — distinct from Mandal cards */}
             <nav className="flex-1 px-3 py-4">
                 <p className="text-[9px] text-white/25 uppercase tracking-[0.15em] font-semibold px-3 mb-2">Navigation</p>
                 <div className="space-y-0.5">
@@ -130,7 +130,7 @@ export function DesktopSidebar() {
             <div className="px-4 pb-3">
                 <div className="px-3 py-3 rounded-xl bg-amber-400/6 border border-amber-400/15 cursor-pointer hover:bg-amber-400/10 transition-colors" onClick={() => router.push("/dashboard")}>
                     <p className="text-[9px] text-amber-400/60 uppercase tracking-widest mb-1">Rajya Health</p>
-                    <p className="text-2xl font-display text-amber-400 leading-none">View â†’</p>
+                    <p className="text-2xl font-display text-amber-400 leading-none">View →</p>
                     <p className="text-[10px] text-white/25 mt-1">Open Dashboard for full score</p>
                 </div>
             </div>

@@ -1,90 +1,115 @@
-import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { createClient } from '@/lib/supabase/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { identityService } from '@/lib/services/identityService';
+import { withAuth, getAuthContext, AuthLevel } from '@/lib/middleware/auth.middleware';
+import { withErrorHandler } from '@/lib/middleware/error.middleware';
+import {
+  successResponse,
+  errorResponse,
+  ErrorCodes,
+  StatusCodes,
+  handlePrismaError,
+} from '@/lib/middleware/standardResponse';
+import { IdentityRecordResponse, CreateIdentityRecordRequest, UpdateIdentityRecordRequest } from '@/lib/types/api.types';
 
-export async function GET() {
+/**
+ * GET /api/identity
+ * Get all identity records for user
+ */
+async function GET(request: NextRequest): Promise<NextResponse> {
+  const authContext = getAuthContext(request);
+  if (!authContext) {
+    return errorResponse(
+      ErrorCodes.UNAUTHORIZED,
+      'Authentication required',
+      StatusCodes.UNAUTHORIZED
+    );
+  }
+
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const records = await identityService.getForUser(authContext.userId);
 
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const responses: IdentityRecordResponse[] = records.map((record) => ({
+      id: record.id,
+      userId: record.userId,
+      idType: record.idType,
+      numberMasked: record.numberMasked,
+      expiryDate: record.expiryDate?.toISOString() || null,
+      issuedDate: record.issuedDate?.toISOString() || null,
+      createdAt: record.createdAt.toISOString(),
+      updatedAt: record.updatedAt.toISOString(),
+    }));
 
-    const profile = await prisma.userProfile.findUnique({
-      where: { authId: user.id }
-    });
-    if (!profile) return NextResponse.json([]);
-
-    const docs = await prisma.identityDoc.findMany({
-      where: { profileId: profile.id },
-      orderBy: { createdAt: 'desc' }
-    });
-
-    return NextResponse.json(docs);
+    return successResponse(responses);
   } catch (error) {
-    console.error("GET Identity Error", error);
-    return NextResponse.json({ error: "Failed to fetch documents" }, { status: 500 });
+    console.error('[Identity GET]', error);
+    return handlePrismaError(error);
   }
 }
 
-export async function POST(request: Request) {
+/**
+ * POST /api/identity
+ * Create or update identity record
+ */
+async function POST(request: NextRequest): Promise<NextResponse> {
+  const authContext = getAuthContext(request);
+  if (!authContext) {
+    return errorResponse(
+      ErrorCodes.UNAUTHORIZED,
+      'Authentication required',
+      StatusCodes.UNAUTHORIZED
+    );
+  }
+
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const data: CreateIdentityRecordRequest | (UpdateIdentityRecordRequest & { id?: string }) = await request.json();
 
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    // Validate required fields
+    if (!data.idType || !data.numberMasked) {
+      return errorResponse(
+        ErrorCodes.VALIDATION_ERROR,
+        'ID type and masked number are required',
+        StatusCodes.UNPROCESSABLE_ENTITY
+      );
     }
 
-    const data = await request.json();
-    
-    // We assume the user profile exists
-    const profile = await prisma.userProfile.findUnique({
-      where: { authId: user.id }
-    });
-    if (!profile) return NextResponse.json({ error: "Profile not found" }, { status: 400 });
+    let record;
 
-    if (data.id) {
-      // Update existing doc
-      const updated = await prisma.identityDoc.update({
-        where: { id: data.id },
-        data: {
-          docNumber: data.docNumber,
-          normalizedDocNumber: data.normalizedDocNumber,
-          nameOnDoc: data.nameOnDoc,
-          dobOnDoc: data.dobOnDoc ? new Date(data.dobOnDoc) : null,
-          expiryDate: data.expiryDate ? new Date(data.expiryDate) : null,
-          issueDate: data.issueDate ? new Date(data.issueDate) : null,
-          placeOfIssue: data.placeOfIssue,
-          notes: data.notes,
-          vaultFileId: data.vaultFileId,
-          verificationStatus: data.verificationStatus,
-          verifiedDate: data.verifiedDate ? new Date(data.verifiedDate) : null,
-          verifiedBy: data.verifiedBy
-        }
+    if ('id' in data && data.id) {
+      // Update existing
+      record = await identityService.update(data.id, {
+        idType: data.idType,
+        numberMasked: data.numberMasked,
+        expiryDate: data.expiryDate ? new Date(data.expiryDate) : undefined,
+        issuedDate: data.issuedDate ? new Date(data.issuedDate) : undefined,
       });
-      return NextResponse.json(updated);
     } else {
-      // Create new
-      const created = await prisma.identityDoc.create({
-        data: {
-          profileId: profile.id,
-          docType: data.docType,
-          docNumber: data.docNumber,
-          normalizedDocNumber: data.normalizedDocNumber,
-          nameOnDoc: data.nameOnDoc,
-          notes: data.notes,
-          vaultFileId: data.vaultFileId
-        }
+      // Create new (will handle unique constraint on userId + idType)
+      record = await identityService.createForUser(authContext.userId, {
+        idType: data.idType,
+        numberMasked: data.numberMasked,
+        numberFull: data.numberFull,
+        expiryDate: data.expiryDate ? new Date(data.expiryDate) : undefined,
+        issuedDate: data.issuedDate ? new Date(data.issuedDate) : undefined,
       });
-      return NextResponse.json(created);
     }
-  } catch (error: unknown) {
-    console.error("POST Identity Error", error);
-    if (typeof error === 'object' && error !== null && 'code' in error && (error as { code?: string }).code === 'P2002') {
-        return NextResponse.json({ error: "DUPLICATE: This document already exists." }, { status: 409 });
-    }
-    return NextResponse.json({ error: "Failed to save document" }, { status: 500 });
+
+    const response: IdentityRecordResponse = {
+      id: record.id,
+      userId: record.userId,
+      idType: record.idType,
+      numberMasked: record.numberMasked,
+      expiryDate: record.expiryDate?.toISOString() || null,
+      issuedDate: record.issuedDate?.toISOString() || null,
+      createdAt: record.createdAt.toISOString(),
+      updatedAt: record.updatedAt.toISOString(),
+    };
+
+    return successResponse(response, StatusCodes.CREATED);
+  } catch (error) {
+    console.error('[Identity POST]', error);
+    return handlePrismaError(error);
   }
 }
+
+export const GET = withAuth(withErrorHandler(GET), AuthLevel.AUTHENTICATED);
+export const POST = withAuth(withErrorHandler(POST), AuthLevel.AUTHENTICATED);

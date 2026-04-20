@@ -1,42 +1,122 @@
-import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { createClient } from '@/lib/supabase/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { familyService } from '@/lib/services/familyService';
+import { withAuth, getAuthContext, AuthLevel } from '@/lib/middleware/auth.middleware';
+import { withErrorHandler } from '@/lib/middleware/error.middleware';
+import {
+  successResponse,
+  errorResponse,
+  ErrorCodes,
+  StatusCodes,
+  handlePrismaError,
+} from '@/lib/middleware/standardResponse';
+import { FamilyMemberResponse, CreateFamilyMemberRequest, UpdateFamilyMemberRequest } from '@/lib/types/api.types';
 
-export async function POST(request: Request) {
+/**
+ * GET /api/family
+ * Get all family members for user
+ */
+async function GET(request: NextRequest): Promise<NextResponse> {
+  const authContext = getAuthContext(request);
+  if (!authContext) {
+    return errorResponse(
+      ErrorCodes.UNAUTHORIZED,
+      'Authentication required',
+      StatusCodes.UNAUTHORIZED
+    );
+  }
+
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const members = await familyService.getFamilyMembers(authContext.userId);
 
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const responses: FamilyMemberResponse[] = members.map((member) => ({
+      id: member.id,
+      userId: member.userId,
+      name: member.name,
+      relation: member.relation,
+      dob: member.dob?.toISOString() || null,
+      isDependent: member.isDependent,
+      nomineeEligible: member.nomineeEligible,
+      accessLevel: member.accessLevel,
+      createdAt: member.createdAt.toISOString(),
+      updatedAt: member.updatedAt.toISOString(),
+    }));
 
-    const data = await request.json();
-    
-    // Find the profile linked to this authenticated user
-    const profile = await prisma.userProfile.findUnique({
-      where: { authId: user.id }
-    });
-    
-    if (!profile) {
-      return NextResponse.json({ error: "Profile not found" }, { status: 400 });
-    }
-
-    const member = await prisma.familyMember.create({
-      data: {
-        profileId: profile.id,
-        name: data.name,
-        relationship: data.relationship,
-        dob: data.dob ? new Date(data.dob) : null,
-        dependent: data.dependent || false,
-        nomineeEligible: data.nomineeEligible || false,
-        accessRole: data.accessRole || "None"
-      }
-    });
-
-    return NextResponse.json(member);
+    return successResponse(responses);
   } catch (error) {
-    console.error("POST Family Error", error);
-    return NextResponse.json({ error: "Failed to add family member" }, { status: 500 });
+    console.error('[Family GET]', error);
+    return handlePrismaError(error);
   }
 }
+
+/**
+ * POST /api/family
+ * Create or update family member
+ */
+async function POST(request: NextRequest): Promise<NextResponse> {
+  const authContext = getAuthContext(request);
+  if (!authContext) {
+    return errorResponse(
+      ErrorCodes.UNAUTHORIZED,
+      'Authentication required',
+      StatusCodes.UNAUTHORIZED
+    );
+  }
+
+  try {
+    const data: CreateFamilyMemberRequest | (UpdateFamilyMemberRequest & { id?: string }) = await request.json();
+
+    // Validate required fields
+    if (!data.name || !data.relation) {
+      return errorResponse(
+        ErrorCodes.VALIDATION_ERROR,
+        'Name and relation are required',
+        StatusCodes.UNPROCESSABLE_ENTITY
+      );
+    }
+
+    let member;
+
+    if ('id' in data && data.id) {
+      // Update existing
+      member = await familyService.update(data.id, {
+        name: data.name,
+        relation: data.relation,
+        dob: data.dob ? new Date(data.dob) : undefined,
+        isDependent: data.isDependent,
+        nomineeEligible: data.nomineeEligible,
+        accessLevel: data.accessLevel,
+      });
+    } else {
+      // Create new
+      member = await familyService.createForUser(authContext.userId, {
+        name: data.name,
+        relation: data.relation,
+        dob: data.dob ? new Date(data.dob) : undefined,
+        isDependent: data.isDependent,
+        nomineeEligible: data.nomineeEligible,
+        accessLevel: data.accessLevel,
+      });
+    }
+
+    const response: FamilyMemberResponse = {
+      id: member.id,
+      userId: member.userId,
+      name: member.name,
+      relation: member.relation,
+      dob: member.dob?.toISOString() || null,
+      isDependent: member.isDependent,
+      nomineeEligible: member.nomineeEligible,
+      accessLevel: member.accessLevel,
+      createdAt: member.createdAt.toISOString(),
+      updatedAt: member.updatedAt.toISOString(),
+    };
+
+    return successResponse(response, StatusCodes.CREATED);
+  } catch (error) {
+    console.error('[Family POST]', error);
+    return handlePrismaError(error);
+  }
+}
+
+export const GET = withAuth(withErrorHandler(GET), AuthLevel.AUTHENTICATED);
+export const POST = withAuth(withErrorHandler(POST), AuthLevel.AUTHENTICATED);

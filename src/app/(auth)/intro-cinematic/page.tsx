@@ -60,7 +60,7 @@ const LightSweep = () => (
         animate={{ opacity: 1 }}
     >
         <motion.div
-            className="w-[200%] h-full bg-gradient-to-r from-transparent via-amber-200/5 to-transparent skew-x-[-30deg]"
+            className="w-[200%] h-full bg-linear-to-r from-transparent via-amber-200/5 to-transparent skew-x-[-30deg]"
             animate={{
                 x: ["-100%", "100%", "100%", "-100%"]
             }}
@@ -325,7 +325,7 @@ export default function IntroOnboarding() {
             </div>
 
             {/* Persistent Bottom Action Area */}
-            <div className="absolute bottom-0 left-0 w-full p-6 pb-10 flex justify-center z-50 bg-gradient-to-t from-slate-950 via-slate-950/80 to-transparent">
+            <div className="absolute bottom-0 left-0 w-full p-6 pb-10 flex justify-center z-50 bg-linear-to-t from-slate-950 via-slate-950/80 to-transparent">
                 <AnimatePresence mode="wait">
                     {step < 2 ? (
                         <motion.button
@@ -351,7 +351,7 @@ export default function IntroOnboarding() {
                             <span className="relative z-10">Enter Svarajya</span>
                             {/* Gold Shimmer Sweep inside button */}
                             <motion.div 
-                                className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent skew-x-[-20deg] w-full"
+                                className="absolute inset-0 bg-linear-to-r from-transparent via-white/40 to-transparent skew-x-[-20deg] w-full"
                                 animate={{ x: ["-100%", "200%"] }}
                                 transition={{ duration: 2, repeat: Infinity, ease: "linear", repeatDelay: 1 }}
                             />

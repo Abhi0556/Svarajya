@@ -85,8 +85,7 @@ export default function AuthGateway() {
                 
                 // If email confirmation is required, session will be null
                 if (!data.session) {
-                    setMode("login");
-                    setMsg("Account created! Please check your email to verify your account before logging in.");
+                    router.push(`/auth/verify-email?email=${encodeURIComponent(trimmedEmail)}`);
                     return;
                 }
 
@@ -96,10 +95,10 @@ export default function AuthGateway() {
                     password,
                 });
                 if (signInError) throw signInError;
-                router.push("/intro");
+                router.push("/onboarding/intro");
             } else if (mode === "forgot_password") {
                 const { error: resetError } = await supabase.auth.resetPasswordForEmail(trimmedEmail, {
-                    redirectTo: `${window.location.origin}/rajya`
+                    redirectTo: `${window.location.origin}/auth/reset-password`
                 });
                 if (resetError) throw resetError;
                 setError("");
@@ -129,7 +128,7 @@ export default function AuthGateway() {
                 provider: "google",
                 options: {
                     redirectTo: `${window.location.origin}/rajya`,
-                    scopes: "https://www.googleapis.com/auth/drive.file"
+                    scopes: "profile email https://www.googleapis.com/auth/drive.file"
                 }
             });
             if (error) throw error;
@@ -142,7 +141,7 @@ export default function AuthGateway() {
     return (
         <div className="flex flex-col min-h-screen items-center justify-between p-8 relative overflow-hidden">
             {/* Background glow */}
-            <div className="absolute inset-0 bg-gradient-to-b from-slate-950 via-[#0a1628] to-slate-950 pointer-events-none" />
+            <div className="absolute inset-0 bg-linear-to-b from-slate-950 via-[#0a1628] to-slate-950 pointer-events-none" />
             <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-64 h-64 bg-amber-500/6 blur-[100px] rounded-full pointer-events-none" />
 
             {/* Dynamic Content Area */}

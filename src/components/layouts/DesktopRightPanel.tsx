@@ -1,8 +1,8 @@
-﻿"use client";
+"use client";
 
 import { usePathname, useRouter } from "next/navigation";
 import { Plus, Bell, TrendingUp, Coins, FileText } from "lucide-react";
-import { NotificationStore } from "@/lib/stores/notificationStore";
+import { NotificationStore } from "@/lib/notificationStore";
 
 const HIDDEN_PATHS = ["/", "/start", "/intro"];
 
