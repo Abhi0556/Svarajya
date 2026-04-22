@@ -107,7 +107,7 @@ function LinkWizardForm() {
                     <div className="w-full space-y-3">
                         <button onClick={() => { setSaved(false); setStep(1); setServiceType(""); setServiceName(""); }}
                             className="w-full bg-amber-400 text-black font-semibold py-3 rounded-xl text-sm">Add Another Link</button>
-                        <button onClick={() => router.push("/identity")}
+                        <button onClick={() => router.push("/pehchaan/records")}
                             className="w-full text-white/35 text-sm py-3">Back to Vault</button>
                     </div>
                 </div>

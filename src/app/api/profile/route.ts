@@ -10,13 +10,13 @@ import {
   StatusCodes,
   handlePrismaError,
 } from '@/lib/middleware/standardResponse';
-import { UserResponse, UpdateUserRequest } from '@/lib/types/api.types';
+import { UserResponse } from '@/lib/types/api.types';
 
 /**
  * GET /api/profile
  * Get current user's profile
  */
-async function GET(request: NextRequest): Promise<NextResponse> {
+async function getHandler(request: NextRequest): Promise<NextResponse> {
   const authContext = getAuthContext(request);
   if (!authContext) {
     return errorResponse(
@@ -65,7 +65,7 @@ async function GET(request: NextRequest): Promise<NextResponse> {
  * POST /api/profile
  * Create or update user profile
  */
-async function POST(request: NextRequest): Promise<NextResponse> {
+async function postHandler(request: NextRequest): Promise<NextResponse> {
   const authContext = getAuthContext(request);
   if (!authContext) {
     return errorResponse(
@@ -76,7 +76,7 @@ async function POST(request: NextRequest): Promise<NextResponse> {
   }
 
   try {
-    const data: UpdateUserRequest = await request.json();
+    const data: any = await request.json();
 
     // Validate required fields
     if (!data.name) {
@@ -119,15 +119,17 @@ async function POST(request: NextRequest): Promise<NextResponse> {
     };
 
     return successResponse(response, StatusCodes.CREATED, 'Profile updated');
-  } catch (error) {
-    console.error('[Profile POST]', error);
+  } catch (error: any) {
+    if (error?.code !== 'ECONNRESET' && error?.name !== 'AbortError' && !error?.message?.includes('aborted')) {
+      console.error('[Profile POST]', error);
+    }
     return handlePrismaError(error);
   }
 }
 
 // Apply middleware
-export const GET = withAuth(withErrorHandler(GET), AuthLevel.AUTHENTICATED);
+export const GET = withAuth(withErrorHandler(getHandler), AuthLevel.AUTHENTICATED);
 export const POST = withAuth(
-  withErrorHandler(POST),
+  withErrorHandler(postHandler),
   AuthLevel.AUTHENTICATED
 );

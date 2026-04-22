@@ -1,12 +1,12 @@
-﻿"use client";
+"use client";
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { Users, ShieldAlert, CheckCircle2, ArrowLeft } from "lucide-react";
-import { FamilyTreeGame, FamilyMember } from "@/components/games/FamilyTreeForge";
-import { VideoTutorialPlaceholder } from "@/components/tutorials/TutorialCard";
-import { OnboardingStore } from "@/lib/stores/onboardingStore";
+import { FamilyTreeGame, FamilyMember } from "@/components/module1/FamilyTreeGame";
+import { VideoTutorialPlaceholder } from "@/components/ui/VideoTutorialPlaceholder";
+import { OnboardingStore } from "@/lib/onboardingStore";
 
 export default function Submodule1B() {
     const router = useRouter();
@@ -67,7 +67,7 @@ export default function Submodule1B() {
                                     <Users className="w-5 h-5 text-amber-400" />
                                 </div>
                                 <div>
-                                    <h2 className="text-base font-semibold text-white">Family Members â€” Step 2 of 4</h2>
+                                    <h2 className="text-base font-semibold text-white">Family Members — Step 2 of 4</h2>
                                     <p className="text-xs text-white/50 mt-0.5">Add up to 5 members</p>
                                 </div>
                             </div>

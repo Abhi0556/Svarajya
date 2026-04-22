@@ -1,10 +1,10 @@
-﻿"use client";
+"use client";
 
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Target, ShieldAlert, CreditCard } from "lucide-react";
-import { ExpenseStore, formatRupee } from "@/lib/stores/expenseStore";
-import { IncomeStore } from "@/lib/stores/incomeStore";
-import { VideoTutorialPlaceholder } from "@/components/tutorials/TutorialCard";
+import { ExpenseStore, formatRupee } from "@/lib/expenseStore";
+import { IncomeStore } from "@/lib/incomeStore";
+import { VideoTutorialPlaceholder } from "@/components/ui/VideoTutorialPlaceholder";
 
 export default function AnalyticsPage() {
     const router = useRouter();
@@ -52,7 +52,7 @@ export default function AnalyticsPage() {
                         </div>
                     ) : (
                         <div className="flex items-center justify-between">
-                            <span className="text-2xl font-bold text-white/50">â€”</span>
+                            <span className="text-2xl font-bold text-white/50">—</span>
                             <button onClick={() => router.push("/kosh")} className="text-xs text-[var(--color-rajya-accent)] underline">
                                 Add income in Kosh to view ratio
                             </button>
@@ -152,7 +152,7 @@ export default function AnalyticsPage() {
                                     <p className="text-[10px] text-white/40">You have {adherence.length} budget(s) set.</p>
                                 </div>
                             </div>
-                            <span className="text-white/20">â†’</span>
+                            <span className="text-white/20">→</span>
                         </button>
                     )}
 
@@ -167,7 +167,7 @@ export default function AnalyticsPage() {
                                     <p className="text-[10px] text-white/40">Stop paying for what you don&apos;t use.</p>
                                 </div>
                             </div>
-                            <span className="text-white/20">â†’</span>
+                            <span className="text-white/20">→</span>
                         </button>
                     )}
 
@@ -181,7 +181,7 @@ export default function AnalyticsPage() {
                                 <p className="text-[10px] text-white/40">Ensure your expenses are well classified.</p>
                             </div>
                         </div>
-                        <span className="text-white/20">â†’</span>
+                        <span className="text-white/20">→</span>
                     </button>
                 </div>
 

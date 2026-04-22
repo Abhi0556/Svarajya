@@ -23,7 +23,7 @@ const ContactSchema = z.object({
   message: z.string().min(10, 'Message must be at least 10 characters').max(5000),
 });
 
-export async function POST(request: NextRequest): Promise<NextResponse> {
+export async function postHandler(request: NextRequest): Promise<NextResponse> {
   try {
     const body = await request.json();
 
@@ -97,7 +97,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
  * GET /api/contact
  * Returns 405 Method Not Allowed
  */
-export async function GET() {
+export async function getHandler() {
   return errorResponse(
     ErrorCodes.VALIDATION_ERROR,
     'GET method not allowed',

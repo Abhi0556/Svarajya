@@ -1,12 +1,12 @@
-﻿"use client";
+"use client";
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { BookOpen, ShieldAlert, CheckCircle2, ArrowLeft, Upload, Plus, GraduationCap } from "lucide-react";
 import { FileUploader } from "@/components/vault/FileUploader";
-import { VideoTutorialPlaceholder } from "@/components/tutorials/TutorialCard";
-import { OnboardingStore } from "@/lib/stores/onboardingStore";
+import { VideoTutorialPlaceholder } from "@/components/ui/VideoTutorialPlaceholder";
+import { OnboardingStore } from "@/lib/onboardingStore";
 
 interface EducationEntry {
     degree: string;
@@ -25,7 +25,7 @@ const DEGREE_OPTIONS = [
     "Professional (MBBS / MD)", "Professional (LLB / LLM)", "Other",
 ];
 
-import { Vault } from "@/lib/services/documentService";
+import { Vault } from "@/lib/vault";
 
 export default function EducationPage() {
     const router = useRouter();
@@ -111,7 +111,7 @@ export default function EducationPage() {
             {/* Guide */}
             <div className="bg-[var(--color-rajya-accent)]/8 border border-[var(--color-rajya-accent)]/20 rounded-xl p-3 mb-5">
                 <p className="text-xs text-[var(--color-rajya-muted)]">
-                    ðŸ’¡ Your education determines earning potential and links to any student loans. Add each degree separately â€” you can upload certificates too.
+                    💡 Your education determines earning potential and links to any student loans. Add each degree separately — you can upload certificates too.
                 </p>
             </div>
 
@@ -125,7 +125,7 @@ export default function EducationPage() {
                                 <GraduationCap className="w-4 h-4 text-[var(--color-rajya-accent)]" />
                                 <p className="text-sm font-medium text-[var(--color-rajya-text)]">{e.degree}</p>
                             </div>
-                            <p className="text-xs text-[var(--color-rajya-muted)]">{e.institution}{e.year ? ` â€¢ ${e.year}` : ""}</p>
+                            <p className="text-xs text-[var(--color-rajya-muted)]">{e.institution}{e.year ? ` • ${e.year}` : ""}</p>
                             {e.specialization && <p className="text-[10px] text-[var(--color-rajya-muted)]/60 mt-0.5">{e.specialization}</p>}
                             {e.certificateId && (
                                 <button type="button" onClick={() => handleViewCert(e.certificateId!)} className="mt-2 text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded flex items-center gap-1 hover:bg-emerald-500/20 transition-colors">
@@ -134,7 +134,7 @@ export default function EducationPage() {
                             )}
                             {e.hasLoan && (
                                 <span className="mt-2 inline-block text-[10px] bg-[var(--color-rajya-danger)]/10 text-[var(--color-rajya-danger)] border border-[var(--color-rajya-danger)]/20 px-2 py-0.5 rounded-full">
-                                    âš  Education Loan Active
+                                    ⚠ Education Loan Active
                                 </span>
                             )}
                         </div>

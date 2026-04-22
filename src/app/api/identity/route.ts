@@ -15,7 +15,7 @@ import { IdentityRecordResponse, CreateIdentityRecordRequest, UpdateIdentityReco
  * GET /api/identity
  * Get all identity records for user
  */
-async function GET(request: NextRequest): Promise<NextResponse> {
+async function getHandler(request: NextRequest): Promise<NextResponse> {
   const authContext = getAuthContext(request);
   if (!authContext) {
     return errorResponse(
@@ -50,7 +50,7 @@ async function GET(request: NextRequest): Promise<NextResponse> {
  * POST /api/identity
  * Create or update identity record
  */
-async function POST(request: NextRequest): Promise<NextResponse> {
+async function postHandler(request: NextRequest): Promise<NextResponse> {
   const authContext = getAuthContext(request);
   if (!authContext) {
     return errorResponse(
@@ -87,7 +87,6 @@ async function POST(request: NextRequest): Promise<NextResponse> {
       record = await identityService.createForUser(authContext.userId, {
         idType: data.idType,
         numberMasked: data.numberMasked,
-        numberFull: data.numberFull,
         expiryDate: data.expiryDate ? new Date(data.expiryDate) : undefined,
         issuedDate: data.issuedDate ? new Date(data.issuedDate) : undefined,
       });
@@ -111,5 +110,5 @@ async function POST(request: NextRequest): Promise<NextResponse> {
   }
 }
 
-export const GET = withAuth(withErrorHandler(GET), AuthLevel.AUTHENTICATED);
-export const POST = withAuth(withErrorHandler(POST), AuthLevel.AUTHENTICATED);
+export const GET = withAuth(withErrorHandler(getHandler), AuthLevel.AUTHENTICATED);
+export const POST = withAuth(withErrorHandler(postHandler), AuthLevel.AUTHENTICATED);

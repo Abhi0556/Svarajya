@@ -1,89 +1,68 @@
-﻿"use client";
+"use client";
 
 import { useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { OnboardingStore } from "@/lib/stores/onboardingStore";
 
-const LAST_LOGIN_KEY = "svarajya_last_login";
+// Routes where AuthSync should never fire
+const BYPASS_PATHS = ["/", "/start", "/login", "/register", "/reset-password", "/verify-email"];
 
-// Routes where AuthSync should do nothing
-const BYPASS_PATHS = ["/", "/start", "/intro"];
+// AuthSync should NEVER redirect away when already inside these sections
+const PROTECTED_PREFIXES = [
+    "/rajya", "/dwaar", "/pehchaan", "/khate", "/kosh", "/vyaya",
+    "/raksha", "/rin", "/mitra", "/leakage", "/foundation", "/suchak",
+    "/beej", "/bhoomi", "/kar", "/lakshya", "/mantri", "/raj-mantri",
+    "/doot", "/sampatti", "/granthagaar", "/suraksha",
+    "/onboarding",
+];
 
 export function AuthSync() {
     const router = useRouter();
     const pathname = usePathname();
 
     useEffect(() => {
-        // Never run on public/cinematic pages
-        if (BYPASS_PATHS.includes(pathname)) return;
-        // Never interfere while user is mid-onboarding
-        if (pathname.startsWith("/onboarding")) return;
+        // Skip on public/auth pages
+        if (BYPASS_PATHS.some(p => pathname === p || pathname.startsWith(p + "?"))) return;
+
+        // Skip inside dashboard & onboarding — just silently hydrate store
+        if (PROTECTED_PREFIXES.some(prefix => pathname.startsWith(prefix))) {
+            // Quietly seed store in background when in dashboard
+            if (!pathname.startsWith("/onboarding")) {
+                OnboardingStore.hydrate().catch(() => {});
+            }
+            return;
+        }
 
         const syncUserData = async () => {
             const supabase = createClient();
             const { data: { session } } = await supabase.auth.getSession();
+            if (!session?.user) return;
 
-            if (!session?.user) return; // Middleware protects routes anyway
+            const user = session.user;
+            const metadata = user.user_metadata ?? {};
 
-            // --- Step 1: Fetch profile directly from DB (authoritative) ---
-            let dbProfile: any = undefined; // undefined means "not fetched yet", null means "confirmed empty"
-            try {
-                const res = await fetch("/api/profile", { cache: "no-store" });
-                if (res.ok) {
-                    dbProfile = await res.json();
-                    console.log("[AuthSync] DB profile fetched:", dbProfile);
-                } else {
-                    console.warn("[AuthSync] Profile API returned", res.status);
-                    if (res.status === 401) return; // Unauthorized handled by middleware
-                    if (res.status >= 500) {
-                         console.warn("[AuthSync] Server error, skipping redirect safety gate");
-                         return;
-                    }
-                    dbProfile = null; // Explicit 404/Empty
-                }
-            } catch (err) {
-                console.error("[AuthSync] Failed to fetch profile (network error):", err);
-                return; // Network error â€” don't redirect
+            // Seed name + email into store immediately from Supabase metadata
+            const registeredName = metadata.full_name ?? "";
+            const registeredEmail = user.email ?? "";
+            if (registeredName || registeredEmail) {
+                await OnboardingStore.set({
+                    ...(registeredName ? { fullName: registeredName } : {}),
+                    email: registeredEmail,
+                }).catch(() => {});
             }
 
-            // --- Step 2: Determine if profile is complete enough ---
-            // We only proceed IF we have a definitive answer (managed to talk to DB)
-            if (dbProfile === undefined) return; 
-            
-            const hasProfile = dbProfile && typeof dbProfile.fullName === "string" && dbProfile.fullName.trim() !== "";
-            
-            // --- Step 3: Actionable Policy ---
-            // - If on Dashboard: Never redirect away. 
-            if (pathname === "/dashboard") return;
+            // KEY LOGIC: Check if user has ever completed onboarding
+            // We store onboarding_completed = true in Supabase user_metadata — zero DB impact.
+            // The Super Admin app reads different tables and never touches user_metadata flags.
+            const onboardingDone = metadata.onboarding_completed === true;
 
-            if (hasProfile) {
-                // Populate in-memory store from DB data
-                await OnboardingStore.hydrate();
-
-                // Track last login
-                const now = new Date().toISOString();
-                const lastLogin = localStorage.getItem(LAST_LOGIN_KEY);
-                localStorage.setItem(LAST_LOGIN_KEY, now);
-
-                // If no previous login on this device â†’ show welcome-back screen
-                if (!lastLogin) {
-                    router.replace("/onboarding/firstwin?returning=true");
-                    return;
-                }
+            if (!onboardingDone) {
+                // New user or incomplete onboarding — send to intro
+                router.replace("/onboarding/intro");
             } else {
-                // No profile â€” start onboarding
-                console.log("[AuthSync] No profile found, starting onboarding flow");
-                const googleName = session.user.user_metadata?.full_name;
-                if (googleName) {
-                    await OnboardingStore.set({
-                        fullName: googleName,
-                        email: session.user.email || ""
-                    });
-                    router.push("/onboarding/dob");
-                } else {
-                    router.push("/onboarding/name");
-                }
+                // Returning user — go straight to dashboard
+                router.replace("/rajya");
             }
         };
 

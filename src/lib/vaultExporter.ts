@@ -18,7 +18,7 @@ export const VaultExporter = {
             let fileCount = 0;
 
             // Iterate over all entries within the OPFS directory
-            // @ts-ignore
+            // @ts-expect-error - TS does not model async iterators on FileSystemDirectoryHandle entries yet.
             for await (const [name, handle] of vaultDir.entries()) {
                 if (handle.kind === 'file') {
                     const file = await (handle as FileSystemFileHandle).getFile();

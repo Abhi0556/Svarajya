@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { BankAccount, LiquiditySettings } from "@/lib/stores/bankStore";
-import { fetchBankSummary, maskAccountNumber, saveLiquiditySettings } from "@/lib/services/bankService";
+import { fetchBankSummary, maskAccountNumber, saveLiquiditySettings } from "@/lib/bankApi";
 import { ArrowLeft, Scale, ArrowRight, CheckCircle2, SlidersHorizontal, ShieldAlert } from "lucide-react";
 
 export default function IdleMoneyEngine() {
@@ -63,7 +63,7 @@ export default function IdleMoneyEngine() {
             return;
         }
 
-        router.push("/bank");
+        router.push("/khate/accounts");
     };
 
     if (loading) {

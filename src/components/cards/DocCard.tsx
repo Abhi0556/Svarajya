@@ -29,7 +29,7 @@ export function DocCard({ docId }: DocCardProps) {
 
     return (
         <button
-            onClick={() => router.push(`/identity/doc/${docId}`)}
+            onClick={() => router.push(`/pehchaan/records/doc/${docId}`)}
             className="w-full text-left bg-white/5 border border-white/10 hover:border-amber-400/30 rounded-xl p-3.5 transition-all"
         >
             <div className="flex items-center gap-3">

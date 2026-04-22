@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { BankStore } from "@/lib/stores/bankStore";
-import { fetchBankSummary, type BankSummary } from "@/lib/services/bankService";
+import { fetchBankSummary, type BankSummary } from "@/lib/bankApi";
 import { ArrowLeft, ArrowUpRight, ArrowDownRight, Scale, Droplet, ShieldAlert, Info } from "lucide-react";
 import Link from "next/link";
 import { motion } from "framer-motion";

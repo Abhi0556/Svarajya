@@ -1,221 +1,223 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { Lock, ArrowRight, Loader2, Check, AlertCircle } from 'lucide-react';
-import { createClient } from '@/lib/supabase/client';
+import { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { useRouter } from "next/navigation";
+import { Lock, ArrowRight, Loader2, Check, X, Eye, EyeOff } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
 
 export default function ResetPasswordPage() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
-  const [error, setError] = useState('');
-  const [validationErrors, setValidationErrors] = useState<string[]>([]);
-  const supabase = createClient();
+    const router = useRouter();
+    const supabase = createClient();
+    
+    const [password, setPassword] = useState("");
+    const [confirmPassword, setConfirmPassword] = useState("");
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+    
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState("");
+    const [success, setSuccess] = useState(false);
+    const [countdown, setCountdown] = useState(5);
 
-  // Check if user has a valid session (from reset email link)
-  useEffect(() => {
-    const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        setError('Invalid or expired reset link. Please request a new one.');
-      }
+    // Countdown effect for success auto-redirect
+    useEffect(() => {
+        let timer: NodeJS.Timeout;
+        if (success && countdown > 0) {
+            timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+        } else if (success && countdown === 0) {
+            router.replace("/start");
+        }
+        return () => clearTimeout(timer);
+    }, [success, countdown, router]);
+
+    const getErrorMessage = (err: unknown, fallback: string) => {
+        if (typeof err === "object" && err !== null && "message" in err) {
+            const msg = (err as { message?: string }).message;
+            return msg || fallback;
+        }
+        return fallback;
     };
-    checkSession();
-  }, [supabase]);
 
-  const validatePassword = (pwd: string): string[] => {
-    const errors: string[] = [];
+    const handleReset = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setError("");
 
-    if (pwd.length < 8) {
-      errors.push('Password must be at least 8 characters long');
-    }
-    if (!/\d/.test(pwd)) {
-      errors.push('Password must contain at least one number');
-    }
-    if (!/[!@#$%^&*(),.?":{}|<>]/.test(pwd)) {
-      errors.push('Password must contain at least one special character');
-    }
+        if (password.length < 8) {
+            setError("Password must be at least 8 characters long.");
+            return;
+        }
+        if (!/\d/.test(password)) {
+            setError("Password must contain at least one number.");
+            return;
+        }
+        if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
+            setError("Password must contain at least one special character.");
+            return;
+        }
+        if (password !== confirmPassword) {
+            setError("Passwords do not match.");
+            return;
+        }
 
-    return errors;
-  };
+        setLoading(true);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setValidationErrors([]);
+        try {
+            const { error: updateError } = await supabase.auth.updateUser({
+                password: password
+            });
+            
+            if (updateError) throw updateError;
+            
+            setSuccess(true);
+            setCountdown(5);
+        } catch (err: unknown) {
+            setError(getErrorMessage(err, "Failed to update password. You may need to request a new link."));
+        } finally {
+            setLoading(false);
+        }
+    };
 
-    // Validate passwords
-    const pwdErrors = validatePassword(password);
-    if (pwdErrors.length > 0) {
-      setValidationErrors(pwdErrors);
-      return;
-    }
+    return (
+        <div className="flex flex-col min-h-screen items-center justify-center p-8 relative overflow-hidden">
+            {/* Background glow */}
+            <div className="absolute inset-0 bg-linear-to-b from-slate-950 via-[#0a1628] to-slate-950 pointer-events-none" />
+            <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-64 h-64 bg-amber-500/6 blur-[100px] rounded-full pointer-events-none" />
 
-    if (password !== confirmPassword) {
-      setError('Passwords do not match.');
-      return;
-    }
+            {/* Dynamic Content Area */}
+            <div className="relative z-10 flex-1 flex flex-col items-center justify-center w-full max-w-sm mt-8 pb-12">
+                <AnimatePresence mode="wait">
+                    {success ? (
+                        <motion.div
+                            key="success"
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, y: -20 }}
+                            transition={{ duration: 0.4 }}
+                            className="w-full flex flex-col items-center text-center space-y-6"
+                        >
+                            <div className="w-16 h-16 rounded-full bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-center shadow-[0_0_30px_rgba(16,185,129,0.15)] mb-4">
+                                <Check className="w-8 h-8 text-emerald-400" />
+                            </div>
+                            <h2 className="text-2xl font-semibold text-emerald-400">Password Updated</h2>
+                            <p className="text-sm text-white/70 leading-relaxed px-4">
+                                Your password has been updated successfully.
+                            </p>
+                            
+                            <div className="pt-8 w-full">
+                                <button
+                                    onClick={() => router.replace("/start")}
+                                    className="w-full bg-white/5 border border-white/10 text-white py-4 rounded-xl text-sm hover:bg-white/10 transition-colors flex items-center justify-center gap-2"
+                                >
+                                    Go to Login <ArrowRight className="w-4 h-4" />
+                                </button>
+                                <p className="text-[10px] text-white/30 mt-4 tracking-wider">
+                                    Redirecting automatically in {countdown}s...
+                                </p>
+                            </div>
+                        </motion.div>
+                    ) : (
+                        <motion.div
+                            key="resetForm"
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            transition={{ duration: 0.4 }}
+                            className="w-full flex flex-col items-center"
+                        >
+                            <div className="w-12 h-12 mb-6 rounded-xl bg-amber-400/10 border border-amber-400/25 flex items-center justify-center shadow-[0_0_20px_rgba(251,191,36,0.1)]">
+                                <span className="text-xl">🔐</span>
+                            </div>
+                            
+                            <h2 className="text-2xl font-semibold text-white mb-2">
+                                Set New Password
+                            </h2>
+                            <p className="text-sm text-white/40 mb-8 text-center px-4">
+                                Enter your new password to regain access to your Rajya.
+                            </p>
 
-    setLoading(true);
+                            <form onSubmit={handleReset} className="w-full space-y-4">
+                                <div className="space-y-4">
+                                    <div className="relative">
+                                        <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
+                                            <Lock className="w-4 h-4 text-white/30" />
+                                        </div>
+                                        <input
+                                            type={showPassword ? "text" : "password"}
+                                            required
+                                            disabled={loading}
+                                            maxLength={100}
+                                            value={password}
+                                            onChange={(e) => setPassword(e.target.value)}
+                                            placeholder="Enter new Password"
+                                            className="w-full bg-white/5 border border-white/10 rounded-xl py-4 pl-12 pr-12 text-white placeholder-white/30 focus:outline-none focus:border-amber-400/50 transition-colors text-sm disabled:opacity-50"
+                                        />
+                                        <button 
+                                            type="button"
+                                            onClick={() => setShowPassword(!showPassword)}
+                                            className="absolute inset-y-0 right-4 flex items-center text-white/40 hover:text-amber-400 transition-colors"
+                                        >
+                                            {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                        </button>
+                                    </div>
+                                    <div className="relative">
+                                        <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
+                                            <Lock className="w-4 h-4 text-white/30" />
+                                        </div>
+                                        <input
+                                            type={showConfirmPassword ? "text" : "password"}
+                                            required
+                                            disabled={loading}
+                                            maxLength={100}
+                                            value={confirmPassword}
+                                            onChange={(e) => setConfirmPassword(e.target.value)}
+                                            placeholder="Confirm new Password"
+                                            className="w-full bg-white/5 border border-white/10 rounded-xl py-4 pl-12 pr-12 text-white placeholder-white/30 focus:outline-none focus:border-amber-400/50 transition-colors text-sm disabled:opacity-50"
+                                        />
+                                        <button 
+                                            type="button"
+                                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                            className="absolute inset-y-0 right-4 flex items-center text-white/40 hover:text-amber-400 transition-colors"
+                                        >
+                                            {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                        </button>
+                                    </div>
 
-    try {
-      const { error: updateError } = await supabase.auth.updateUser({
-        password,
-      });
+                                    {/* Password Requirements Checklist */}
+                                    <div className="space-y-2 px-1 pb-2">
+                                        <div className="flex items-center gap-2 text-xs">
+                                            {password.length >= 8 ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <X className="w-3.5 h-3.5 text-red-500/70" />}
+                                            <span className={password.length >= 8 ? "text-emerald-400/90" : "text-white/40"}>At least 8 characters</span>
+                                        </div>
+                                        <div className="flex items-center gap-2 text-xs">
+                                            {/\d/.test(password) ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <X className="w-3.5 h-3.5 text-red-500/70" />}
+                                            <span className={/\d/.test(password) ? "text-emerald-400/90" : "text-white/40"}>Contains at least one number</span>
+                                        </div>
+                                        <div className="flex items-center gap-2 text-xs">
+                                            {/[!@#$%^&*(),.?":{}|<>]/.test(password) ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <X className="w-3.5 h-3.5 text-red-500/70" />}
+                                            <span className={/[!@#$%^&*(),.?":{}|<>]/.test(password) ? "text-emerald-400/90" : "text-white/40"}>Contains a special character</span>
+                                        </div>
+                                    </div>
+                                </div>
 
-      if (updateError) throw updateError;
+                                {error && (
+                                    <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-xs text-center">
+                                        {error}
+                                    </div>
+                                )}
 
-      setSuccess(true);
-
-      // Redirect to login after 2 seconds
-      setTimeout(() => {
-        router.push('/start');
-      }, 2000);
-    } catch (err: unknown) {
-      if (typeof err === 'object' && err !== null && 'message' in err) {
-        setError((err as { message?: string }).message || 'Failed to reset password. Please try again.');
-      } else {
-        setError('Failed to reset password. Please try again.');
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div className="min-h-screen bg-linear-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center px-4 py-20">
-      <div className="w-full max-w-md">
-        {/* Header */}
-        <div className="mb-8 text-center">
-          <h1 className="text-4xl font-bold text-white mb-2">Create New Password</h1>
-          <p className="text-gray-400">Enter a new password for your account.</p>
+                                <button
+                                    type="submit"
+                                    disabled={loading}
+                                    className="w-full bg-amber-400 text-black font-semibold py-4 rounded-xl text-sm flex items-center justify-center transition-colors disabled:opacity-70 disabled:cursor-not-allowed mt-2"
+                                >
+                                    {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Update Password"}
+                                </button>
+                            </form>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+            </div>
         </div>
-
-        {/* Form */}
-        {!success ? (
-          <form onSubmit={handleSubmit} className="space-y-6 bg-slate-800/50 backdrop-blur-sm p-8 rounded-2xl border border-slate-700">
-            {/* Password Input */}
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-2">
-                New Password
-              </label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-3.5 w-5 h-5 text-mudra-gold" />
-                <input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="w-full pl-10 pr-4 py-3 bg-slate-700/30 border border-slate-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-mudra-gold transition-colors"
-                />
-              </div>
-            </div>
-
-            {/* Confirm Password Input */}
-            <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-300 mb-2">
-                Confirm Password
-              </label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-3.5 w-5 h-5 text-mudra-gold" />
-                <input
-                  id="confirmPassword"
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="w-full pl-10 pr-4 py-3 bg-slate-700/30 border border-slate-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-mudra-gold transition-colors"
-                />
-              </div>
-            </div>
-
-            {/* Password Requirements */}
-            {(password.length > 0 || validationErrors.length > 0) && (
-              <div className="p-4 bg-slate-700/30 border border-slate-600 rounded-lg space-y-2">
-                <p className="text-sm font-medium text-gray-300 mb-2">Password Requirements:</p>
-                <ul className="space-y-1 text-sm">
-                  <li
-                    className={`flex items-center gap-2 ${
-                      password.length >= 8 ? 'text-green-400' : 'text-gray-500'
-                    }`}
-                  >
-                    <span className="text-xs">✓</span> At least 8 characters
-                  </li>
-                  <li
-                    className={`flex items-center gap-2 ${/\d/.test(password) ? 'text-green-400' : 'text-gray-500'}`}
-                  >
-                    <span className="text-xs">✓</span> Contains a number
-                  </li>
-                  <li
-                    className={`flex items-center gap-2 ${
-                      /[!@#$%^&*(),.?":{}|<>]/.test(password) ? 'text-green-400' : 'text-gray-500'
-                    }`}
-                  >
-                    <span className="text-xs">✓</span> Contains a special character
-                  </li>
-                </ul>
-              </div>
-            )}
-
-            {/* Validation Errors */}
-            {validationErrors.length > 0 && (
-              <div className="space-y-2 p-4 bg-red-900/10 border border-red-700/30 rounded-lg">
-                {validationErrors.map((err, idx) => (
-                  <div key={idx} className="flex items-start gap-2">
-                    <AlertCircle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
-                    <p className="text-red-400 text-sm">{err}</p>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Error Message */}
-            {error && (
-              <div className="flex items-center gap-2 p-3 bg-red-900/10 border border-red-700/30 rounded-lg">
-                <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0" />
-                <p className="text-red-400 text-sm">{error}</p>
-              </div>
-            )}
-
-            {/* Submit Button */}
-            <button
-              type="submit"
-              disabled={loading || !password || !confirmPassword}
-              className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-linear-to-r from-mudra-gold to-yellow-400 text-black font-semibold rounded-lg hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                  Resetting...
-                </>
-              ) : (
-                <>
-                  Reset Password
-                  <ArrowRight className="w-5 h-5" />
-                </>
-              )}
-            </button>
-          </form>
-        ) : (
-          // Success Message
-          <div className="space-y-6 bg-slate-800/50 backdrop-blur-sm p-8 rounded-2xl border border-slate-700 text-center">
-            <div className="flex justify-center">
-              <div className="w-12 h-12 bg-green-500/20 rounded-full flex items-center justify-center">
-                <Check className="w-6 h-6 text-green-400" />
-              </div>
-            </div>
-            <div>
-              <h2 className="text-2xl font-bold text-white mb-2">Password Reset Successfully!</h2>
-              <p className="text-gray-400">Your password has been updated. Redirecting to login...</p>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
+    );
 }

@@ -1,13 +1,13 @@
-﻿"use client";
+"use client";
 
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Users, GraduationCap, Camera, CheckCircle2 } from "lucide-react";
 import { FileUploader } from "@/components/vault/FileUploader";
-import { OnboardingStore } from "@/lib/stores/onboardingStore";
-import { PageGuide } from "@/components/shared/PageGuide";
-import { VideoTutorialPlaceholder } from "@/components/tutorials/TutorialCard";
+import { OnboardingStore } from "@/lib/onboardingStore";
+import { PageGuide } from "@/components/ui/PageGuide";
+import { VideoTutorialPlaceholder } from "@/components/ui/VideoTutorialPlaceholder";
 
 const STEPS = [
     { id: "family", icon: <Users className="w-5 h-5" />, label: "Family Members", desc: "Who depends on you financially?", route: "/foundation/family" },
@@ -38,12 +38,12 @@ export default function FoundationHub() {
                     <PageGuide
                         title="Your Foundation (Sthapana)"
                         description="Complete your personal profile, add family members, and record your education. This forms the base of your financial kingdom."
-                        actions={[{ emoji: "ðŸ‘¤", label: "Profile" }, { emoji: "ðŸ‘ª", label: "Family" }, { emoji: "ðŸŽ“", label: "Education" }]}
+                        actions={[{ emoji: "👤", label: "Profile" }, { emoji: "👪", label: "Family" }, { emoji: "🎓", label: "Education" }]}
                     />
                     <div className="h-4" />
                 </div>
 
-                {/* User identity card â€” populated from onboarding */}
+                {/* User identity card — populated from onboarding */}
                 <div className="bg-white/5 border border-white/10 rounded-2xl p-4 mb-6">
                     <div className="flex items-center gap-4">
                         {/* Profile photo upload */}
@@ -73,7 +73,7 @@ export default function FoundationHub() {
                         <div className="flex-1 min-w-0">
                             <p className="font-semibold text-white truncate">{data.fullName || "Your Name"}</p>
                             <p className="text-xs text-white/40 mt-0.5">
-                                {data.occupationType || "Occupation"} Â· {data.lifePhase || "Nirmaan"} phase
+                                {data.occupationType || "Occupation"} · {data.lifePhase || "Nirmaan"} phase
                             </p>
                             {data.mobile && (
                                 <p className="text-xs text-white/30 mt-0.5">+91 {data.mobile}</p>
@@ -110,14 +110,14 @@ export default function FoundationHub() {
                                 <p className="text-sm font-medium text-white">{step.label}</p>
                                 <p className="text-xs text-white/40 mt-0.5">{step.desc}</p>
                             </div>
-                            <span className="text-white/20 text-xl">â€º</span>
+                            <span className="text-white/20 text-xl">›</span>
                         </motion.button>
                     ))}
                 </div>
 
                 {/* YouTube Tutorial */}
                 <div className="mt-4">
-                    <p className="text-[10px] text-white/30 uppercase tracking-wider mb-2">ðŸŽ“ Learn More</p>
+                    <p className="text-[10px] text-white/30 uppercase tracking-wider mb-2">🎓 Learn More</p>
                     <VideoTutorialPlaceholder youtubeId="hU0V-FwTmWk" label="How to build a strong financial foundation" />
                 </div>
 

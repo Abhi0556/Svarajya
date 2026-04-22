@@ -42,7 +42,7 @@ declare global {
  * Auth Middleware
  * Verifies Supabase session and ensures user exists in database
  */
-export async function withAuth(
+export function withAuth(
   handler: (
     request: NextRequest,
     context?: any
@@ -71,22 +71,17 @@ export async function withAuth(
         );
       }
 
-      // Find or create user in database
-      let user = await prisma.user.findUnique({
+      // Find or create user atomically strictly avoiding concurrency Unique Constraint failures
+      let user = await prisma.user.upsert({
         where: { id: authUser.id },
+        update: {}, // Do nothing if exists
+        create: {
+          id: authUser.id,
+          email: authUser.email,
+          status: 'PENDING_VERIFICATION',
+          profileType: 'INDIVIDUAL_SALARIED', // Default
+        },
       });
-
-      // If user doesn't exist, create placeholder
-      if (!user) {
-        user = await prisma.user.create({
-          data: {
-            id: authUser.id,
-            email: authUser.email,
-            status: 'PENDING_VERIFICATION',
-            profileType: 'INDIVIDUAL_SALARIED', // Default
-          },
-        });
-      }
 
       // Check auth level requirements
       if (requiredLevel === AuthLevel.VERIFIED) {

@@ -15,7 +15,7 @@ import { CredentialRecordResponse, CreateCredentialRecordRequest, UpdateCredenti
  * GET /api/credentials
  * Get all credential records for user
  */
-async function GET(request: NextRequest): Promise<NextResponse> {
+async function getHandler(request: NextRequest): Promise<NextResponse> {
   const authContext = getAuthContext(request);
   if (!authContext) {
     return errorResponse(
@@ -55,7 +55,7 @@ async function GET(request: NextRequest): Promise<NextResponse> {
  * POST /api/credentials
  * Create or update credential record
  */
-async function POST(request: NextRequest): Promise<NextResponse> {
+async function postHandler(request: NextRequest): Promise<NextResponse> {
   const authContext = getAuthContext(request);
   if (!authContext) {
     return errorResponse(
@@ -66,7 +66,7 @@ async function POST(request: NextRequest): Promise<NextResponse> {
   }
 
   try {
-    const data: CreateCredentialRecordRequest | (UpdateCredentialRecordRequest & { id?: string }) = await request.json();
+    const data: any = await request.json();
 
     // Validate required fields
     if (!data.portalType || !data.portalName) {
@@ -129,5 +129,5 @@ async function POST(request: NextRequest): Promise<NextResponse> {
   }
 }
 
-export const GET = withAuth(withErrorHandler(GET), AuthLevel.AUTHENTICATED);
-export const POST = withAuth(withErrorHandler(POST), AuthLevel.AUTHENTICATED);
+export const GET = withAuth(withErrorHandler(getHandler), AuthLevel.AUTHENTICATED);
+export const POST = withAuth(withErrorHandler(postHandler), AuthLevel.AUTHENTICATED);

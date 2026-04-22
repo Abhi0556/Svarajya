@@ -20,7 +20,7 @@ const PRIMARY_TABS = [
 const SECONDARY_TABS = [
     { id: "profile", label: "Profile", icon: User, route: "/foundation" },
     { id: "alerts-sec", label: "Alerts", icon: Bell, route: "/notifications" },
-    { id: "emergency", label: "Emergency Access", icon: ShieldAlert, route: "/credentials/access" },
+    { id: "emergency", label: "Emergency Access", icon: ShieldAlert, route: "/dwaar/portals/access" },
     { id: "backup", label: "Backup / Sync", icon: Cloud, route: "/vault" },
     { id: "privacy", label: "Privacy", icon: Lock, route: "/dashboard" },
     { id: "settings", label: "Settings", icon: Settings, route: "/dashboard" },

@@ -111,6 +111,11 @@ export function errorResponse(
  * Prisma Error Handler
  */
 export function handlePrismaError(error: any) {
+  // If the client aborted the connection mid-flight, this is expected behavior on fast tab navigation.
+  if (error?.code === 'ECONNRESET' || error?.name === 'AbortError' || error?.message?.includes('aborted')) {
+    return NextResponse.json({}, { status: 499 }); // 499 Client Closed Request
+  }
+  
   console.error('[Prisma Error]', error);
 
   // Unique constraint violation

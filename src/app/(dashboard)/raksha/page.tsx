@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -6,7 +6,7 @@ import { MicroLearningWrapper } from "@/components/module/MicroLearningWrapper";
 import { SelectGridGame } from "@/components/module/SelectGridGame";
 import { Shield, HeartPulse, Home, Car } from "lucide-react";
 import { motion } from "framer-motion";
-import { VideoTutorialPlaceholder } from "@/components/tutorials/TutorialCard";
+import { VideoTutorialPlaceholder } from "@/components/ui/VideoTutorialPlaceholder";
 
 const RAKSHA_TYPES = [
     { id: 'term', label: 'Term (Life)', icon: <Shield /> },
@@ -36,7 +36,7 @@ export default function RakshaModule() {
         <div className="min-h-screen py-12 px-6">
             <MicroLearningWrapper
                 moduleTitle="The Raksha (Shield & Fortress)"
-                contextText="A kingdom builds its treasury (Kosh), but an invading army â€” like an unforeseen medical crisis or accident â€” can pillage it overnight if there are no walls."
+                contextText="A kingdom builds its treasury (Kosh), but an invading army — like an unforeseen medical crisis or accident — can pillage it overnight if there are no walls."
                 insightText="68% of families who face a sudden medical emergency are forced to liquidate their core assets or take predatory loans due to inadequate Raksha."
                 quizQuestion="What is the primary purpose of Raksha (Insurance)?"
                 quizOptions={[
@@ -89,7 +89,7 @@ export default function RakshaModule() {
 
             {/* YouTube Tutorial */}
             <div className="mt-6">
-                <p className="text-[10px] text-white/30 uppercase tracking-wider mb-2">ðŸŽ“ Learn More</p>
+                <p className="text-[10px] text-white/30 uppercase tracking-wider mb-2">🎓 Learn More</p>
                 <VideoTutorialPlaceholder youtubeId="3Ob3stTkGLs" label="Term insurance & health insurance explained for beginners" />
             </div>
         </div>

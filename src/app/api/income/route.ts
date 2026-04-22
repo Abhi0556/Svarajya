@@ -15,7 +15,7 @@ import { IncomeStreamResponse, CreateIncomeRequest, UpdateIncomeRequest } from '
  * GET /api/income
  * Get all income streams for user
  */
-async function GET(request: NextRequest): Promise<NextResponse> {
+async function getHandler(request: NextRequest): Promise<NextResponse> {
   const authContext = getAuthContext(request);
   if (!authContext) {
     return errorResponse(
@@ -54,7 +54,7 @@ async function GET(request: NextRequest): Promise<NextResponse> {
  * POST /api/income
  * Create or update income stream
  */
-async function POST(request: NextRequest): Promise<NextResponse> {
+async function postHandler(request: NextRequest): Promise<NextResponse> {
   const authContext = getAuthContext(request);
   if (!authContext) {
     return errorResponse(
@@ -126,5 +126,5 @@ async function POST(request: NextRequest): Promise<NextResponse> {
   }
 }
 
-export const GET = withAuth(withErrorHandler(GET), AuthLevel.AUTHENTICATED);
-export const POST = withAuth(withErrorHandler(POST), AuthLevel.AUTHENTICATED);
+export const GET = withAuth(withErrorHandler(getHandler), AuthLevel.AUTHENTICATED);
+export const POST = withAuth(withErrorHandler(postHandler), AuthLevel.AUTHENTICATED);

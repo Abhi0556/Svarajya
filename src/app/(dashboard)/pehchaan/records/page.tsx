@@ -1,12 +1,12 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ShieldCheck, ArrowLeft, CreditCard, FileText, Plane, Car, Vote, MoreHorizontal } from "lucide-react";
-import { IdentityStore, DocType, calcSealStrength } from "@/lib/stores/identityStore";
+import { IdentityStore, DocType, calcSealStrength } from "@/lib/identityStore";
 import { SealStrengthRing } from "@/components/identity/SealStrengthRing";
-import { VideoTutorialPlaceholder } from "@/components/tutorials/TutorialCard";
-import { PageGuide } from "@/components/shared/PageGuide";
+import { VideoTutorialPlaceholder } from "@/components/ui/VideoTutorialPlaceholder";
+import { PageGuide } from "@/components/ui/PageGuide";
 
 const DOC_META: Record<DocType, { label: string; icon: React.ReactNode }> = {
     aadhaar: { label: "Aadhaar", icon: <CreditCard className="w-5 h-5" /> },
@@ -62,8 +62,8 @@ export default function IdentityHub() {
                 {/* Guide Section */}
                 <PageGuide
                     title="What is Pehchaan?"
-                    description="Store your identity documents securely â€” Aadhaar, PAN, Passport, and more. Track expiry dates, link contacts, and build your identity confidence score."
-                    actions={[{ emoji: "ðŸ“„", label: "Add documents" }, { emoji: "ðŸ”—", label: "Link contacts" }, { emoji: "ðŸ“…", label: "Track renewals" }]}
+                    description="Store your identity documents securely — Aadhaar, PAN, Passport, and more. Track expiry dates, link contacts, and build your identity confidence score."
+                    actions={[{ emoji: "📄", label: "Add documents" }, { emoji: "🔗", label: "Link contacts" }, { emoji: "📅", label: "Track renewals" }]}
                 />
                 <div className="h-4" />
 
@@ -110,7 +110,7 @@ export default function IdentityHub() {
                         return (
                             <button
                                 key={type}
-                                onClick={() => docCount > 0 ? router.push(`/identity/doc/${typeDocs[0].id}`) : router.push(`/identity/add?type=${type}`)}
+                                onClick={() => docCount > 0 ? router.push(`/pehchaan/records/doc/${typeDocs[0].id}`) : router.push(`/pehchaan/records/add?type=${type}`)}
                                 className="bg-white/5 border border-white/10 hover:border-amber-400/40 rounded-2xl p-4 text-left transition-all"
                             >
                                 <div className="flex items-start justify-between mb-3">
@@ -141,7 +141,7 @@ export default function IdentityHub() {
                         return (
                             <button
                                 key={otherDoc.id}
-                                onClick={() => router.push(`/identity/doc/${otherDoc.id}`)}
+                                onClick={() => router.push(`/pehchaan/records/doc/${otherDoc.id}`)}
                                 className="bg-white/5 border border-white/10 hover:border-amber-400/40 rounded-2xl p-4 text-left transition-all"
                             >
                                 <div className="flex items-start justify-between mb-3">
@@ -159,7 +159,7 @@ export default function IdentityHub() {
 
                     {/* Render "Add Other" button if no other docs exist, or as an extra block */}
                     <button
-                        onClick={() => router.push(`/identity/add?type=other`)}
+                        onClick={() => router.push(`/pehchaan/records/add?type=other`)}
                         className="bg-white/5 border border-white/5 border-dashed hover:border-white/20 rounded-2xl p-4 text-center transition-all flex flex-col items-center justify-center opacity-60 hover:opacity-100"
                     >
                         <div className="text-white/40 mb-2">{DOC_META["other"].icon}</div>
@@ -171,15 +171,15 @@ export default function IdentityHub() {
                 {/* Navigation buttons */}
                 <div className="space-y-3 mt-5">
                     <div className="grid grid-cols-2 gap-3">
-                        <button onClick={() => router.push("/identity/links")} className="bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-xs text-white/50 hover:border-white/25 transition-colors">
-                            ðŸ”— Manage Links
+                        <button onClick={() => router.push("/pehchaan/records/links")} className="bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-xs text-white/50 hover:border-white/25 transition-colors">
+                            🔗 Manage Links
                         </button>
-                        <button onClick={() => router.push("/identity/renewals")} className="bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-xs text-white/50 hover:border-white/25 transition-colors">
-                            ðŸ“… Renewals
+                        <button onClick={() => router.push("/pehchaan/records/renewals")} className="bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-xs text-white/50 hover:border-white/25 transition-colors">
+                            📅 Renewals
                         </button>
                     </div>
-                    <button onClick={() => router.push("/identity/settings")} className="w-full text-center text-xs text-white/50 py-2 hover:text-white/70 transition-colors">
-                        âš™ï¸ Vault Settings
+                    <button onClick={() => router.push("/pehchaan/records/settings")} className="w-full text-center text-xs text-white/50 py-2 hover:text-white/70 transition-colors">
+                        ⚙️ Vault Settings
                     </button>
                 </div>
                 {/* YouTube Tutorial */}
@@ -190,7 +190,7 @@ export default function IdentityHub() {
                 {/* Primary CTA */}
                 <div className="pb-4 pt-4">
                     <button
-                        onClick={() => router.push("/identity/add")}
+                        onClick={() => router.push("/pehchaan/records/add")}
                         className="w-full bg-amber-400 text-black font-semibold py-4 rounded-xl text-sm hover:bg-amber-300 transition-colors"
                     >
                         {docs.length === 0 ? "Add First Document" : "Add Another Document"}

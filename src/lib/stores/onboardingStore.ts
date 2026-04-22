@@ -33,12 +33,19 @@ export const OnboardingStore = {
         // Sync to API in background
         if (typeof window !== 'undefined') {
             try {
+                // Map local 'fullName' to 'name' which Prisma and the API strictly require
+                const payload = {
+                    ..._data,
+                    name: _data.fullName 
+                };
+
                 await fetch('/api/profile', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(_data)
+                    body: JSON.stringify(payload)
                 });
-            } catch (err) {
+            } catch (err: any) {
+                if (err.name === 'AbortError') return; // Expected on fast navigation
                 console.error("Failed to sync profile", err);
             }
         }

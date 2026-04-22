@@ -16,7 +16,7 @@ import { OnboardingStore } from "@/lib/stores/onboardingStore";
 import { ThemeStore, ThemeMode } from "@/lib/stores/themeStore";
 import { VideoTutorialPlaceholder } from "@/components/tutorials/TutorialCard";
 import { UserAvatar } from "@/components/shared/UserAvatar";
-import { fetchBankSummary } from "@/lib/services/bankService";
+import { fetchBankSummary } from "@/lib/bankApi";
 
 export default function Dashboard() {
     const router = useRouter();
@@ -75,11 +75,11 @@ export default function Dashboard() {
 
     const KINGDOM_ZONES = [
         { id: 'foundation', title: 'Sthapana (Foundation)', route: '/foundation', icon: <BookOpen className="w-5 h-5" />, status: sthapanaStatus, completion: sthapanaCompletion, desc: 'Profile, family & education' },
-        { id: 'identity', title: 'Pehchaan (Identity Records)', route: '/identity', icon: <Fingerprint className="w-5 h-5" />, status: identityStatus, completion: identityCompletion, desc: 'Your identity documents' },
-        { id: 'credentials', title: 'Kunji (Credentials & Access)', route: '/credentials', icon: <Key className="w-5 h-5" />, status: credStatus, completion: credCompletion, desc: 'Login portals & access' },
+        { id: 'identity', title: 'Pehchaan (Identity Records)', route: '/pehchaan/records', icon: <Fingerprint className="w-5 h-5" />, status: identityStatus, completion: identityCompletion, desc: 'Your identity documents' },
+        { id: 'credentials', title: 'Kunji (Credentials & Access)', route: '/dwaar/portals', icon: <Key className="w-5 h-5" />, status: credStatus, completion: credCompletion, desc: 'Login portals & access' },
         { id: 'protection', title: 'Raksha (Insurance & Protection)', route: '/raksha', icon: <Shield className="w-5 h-5" />, status: 'warning', completion: 40, desc: 'Insurance & risk cover' },
         { id: 'growth', title: 'Kosh (Income & Treasury)', route: '/kosh', icon: <Coins className="w-5 h-5" />, status: koshStatus, completion: koshCompletion, desc: koshDesc },
-        { id: 'bank', title: 'Pravah (Bank Accounts & Cashflow)', route: '/bank', icon: <Droplets className="w-5 h-5" />, status: 'secure', completion: 100, desc: 'Bank accounts & cashflow' },
+        { id: 'bank', title: 'Pravah (Bank Accounts & Cashflow)', route: '/khate/accounts', icon: <Droplets className="w-5 h-5" />, status: 'secure', completion: 100, desc: 'Bank accounts & cashflow' },
         { id: 'control', title: 'Rin (Loans & Liabilities)', route: '/rin', icon: <Activity className="w-5 h-5" />, status: 'critical', completion: 10, desc: 'Debt & loan management' },
         { id: 'vyaya', title: 'Vyaya (Expenses & Leakage)', route: '/vyaya', icon: <Coins className="w-5 h-5" />, status: 'warning', completion: 40, desc: 'Track and control leakage' },
         { id: 'legacy', title: 'Mitra (Nominees & Legacy)', route: '/mitra', icon: <Users className="w-5 h-5" />, status: 'warning', completion: 30, desc: 'Trusted nominees & legacy' },
@@ -138,12 +138,12 @@ export default function Dashboard() {
         if (identityCoverage.filled < 2) return {
             title: "Secure your identity.",
             subtext: "Add your Aadhaar or PAN in the Pehchaan Mandal to establish your core financial anchor.",
-            route: "/identity"
+            route: "/pehchaan/records"
         };
         if (bankAccountCount === 0) return {
             title: "Map your liquidity.",
             subtext: "Add your primary bank account in the Pravah Mandal to calculate your emergency reserves.",
-            route: "/bank"
+            route: "/khate/accounts"
         };
         if (IncomeStore.getRecords().length === 0) return {
             title: "Define your treasury.",

@@ -10,7 +10,7 @@ import {
  * Error Handler Middleware
  * Wraps route handlers with centralized error handling
  */
-export async function withErrorHandler(
+export function withErrorHandler(
   handler: (request: NextRequest, context?: any) => Promise<NextResponse>
 ) {
   return async (request: NextRequest, context?: any) => {

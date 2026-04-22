@@ -1,8 +1,8 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useState } from "react";
-import { fetchBankSummary, maskAccountNumber, type BankSummary } from "@/lib/services/bankService";
-import { BankStore, BankAccount } from "@/lib/stores/bankStore";
+import { fetchBankSummary, maskAccountNumber, type BankSummary } from "@/lib/bankApi";
+import { BankStore, BankAccount } from "@/lib/bankStore";
 import { Droplets, Plus, Landmark, AlertTriangle, Wallet, History, ArrowUpRight, ArrowDownRight, Scale, Info, ShieldAlert } from "lucide-react";
 import Link from "next/link";
 
@@ -44,18 +44,18 @@ export default function BankHub() {
     const alerts: { id: string, text: string, type: "critical" | "warning", link: string }[] = [];
     if (metrics) {
         if (metrics.efStatus === "critical") {
-            alerts.push({ id: "ef", text: "Emergency fund below 1 month.", type: "critical", link: "/bank/flow" });
+            alerts.push({ id: "ef", text: "Emergency fund below 1 month.", type: "critical", link: "/khate/accounts/flow" });
         } else if (metrics.efStatus === "low") {
-            alerts.push({ id: "ef", text: "Emergency fund below 3 months.", type: "warning", link: "/bank/flow" });
+            alerts.push({ id: "ef", text: "Emergency fund below 3 months.", type: "warning", link: "/khate/accounts/flow" });
         }
 
         const dormantUpdates = accounts.filter(a => new Date(a.latestBalanceAsOf) < new Date(now - 60 * 86400000));
         if (dormantUpdates.length > 0) {
-            alerts.push({ id: "dormant", text: `${dormantUpdates.length} account(s) not updated in 60 days.`, type: "warning", link: "/bank" });
+            alerts.push({ id: "dormant", text: `${dormantUpdates.length} account(s) not updated in 60 days.`, type: "warning", link: "/khate/accounts" });
         }
 
         if (metrics.idleAccounts.length > 0) {
-            alerts.push({ id: "idle", text: `${metrics.idleAccounts.length} account(s) exceed idle threshold.`, type: "warning", link: "/bank/idle" });
+            alerts.push({ id: "idle", text: `${metrics.idleAccounts.length} account(s) exceed idle threshold.`, type: "warning", link: "/khate/accounts/idle" });
         }
     }
 
@@ -109,7 +109,7 @@ export default function BankHub() {
                             </div>
 
                             <div className="flex items-baseline gap-1">
-                                <span className="text-2xl text-white/50">â‚¹</span>
+                                <span className="text-2xl text-white/50">₹</span>
                                 <h2 className="text-4xl font-bold text-white tracking-tight">
                                     {totalLiquid.toLocaleString("en-IN")}
                                 </h2>
@@ -135,7 +135,7 @@ export default function BankHub() {
                                             {metrics?.emergencyFundMonths.toFixed(1)} Months Covered
                                         </div>
                                         <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 w-48 bg-black/90 text-white text-[10px] p-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none text-center border border-white/10 z-20">
-                                            Emergency Fund = Liquid Assets Ã· Monthly Expenses (from Vyaya).
+                                            Emergency Fund = Liquid Assets ÷ Monthly Expenses (from Vyaya).
                                             <br /><br />
                                             {metrics?.efStatus === "critical" ? "Critical: Less than 1 month." :
                                                 metrics?.efStatus === "low" ? "Low: Below recommended safety buffer." :
@@ -154,23 +154,23 @@ export default function BankHub() {
                                         <p className="text-[10px] text-emerald-400/80 uppercase mb-1 flex justify-center items-center gap-1">
                                             <ArrowDownRight className="w-3 h-3" /> Inflow
                                         </p>
-                                        <p className="text-sm font-semibold text-white">â‚¹ {(flow.inflow / 1000).toFixed(1)}k</p>
+                                        <p className="text-sm font-semibold text-white">₹ {(flow.inflow / 1000).toFixed(1)}k</p>
                                     </div>
                                     <div className="text-center border-l border-r border-white/10 px-2">
                                         <p className="text-[10px] text-red-400/80 uppercase mb-1 flex justify-center items-center gap-1">
                                             <ArrowUpRight className="w-3 h-3" /> Outflow
                                         </p>
-                                        <p className="text-sm font-semibold text-white">â‚¹ {(flow.outflow / 1000).toFixed(1)}k</p>
+                                        <p className="text-sm font-semibold text-white">₹ {(flow.outflow / 1000).toFixed(1)}k</p>
                                     </div>
                                     <div className="text-center">
                                         <p className="text-[10px] text-blue-400/80 uppercase mb-1">Surplus</p>
-                                        <p className="text-sm font-semibold text-white">â‚¹ {(flow.surplus / 1000).toFixed(1)}k</p>
+                                        <p className="text-sm font-semibold text-white">₹ {(flow.surplus / 1000).toFixed(1)}k</p>
                                     </div>
                                 </div>
                                 {flow.surplus < 0 && (
                                     <div className="mt-3 flex items-center justify-center gap-1.5 text-xs text-red-400 bg-red-500/10 py-1.5 rounded text-center">
                                         <ShieldAlert className="w-3.5 h-3.5" />
-                                        âš  You are spending more than your monthly inflow.
+                                        ⚠ You are spending more than your monthly inflow.
                                     </div>
                                 )}
                             </div>
@@ -196,19 +196,19 @@ export default function BankHub() {
 
                     {/* Navigation Actions Grid */}
                     <div className="grid grid-cols-2 gap-3">
-                        <Link href="/bank/add" className="bg-white/5 border border-white/10 rounded-2xl p-4 flex flex-col items-center justify-center gap-2 hover:bg-white/10 transition-colors">
+                        <Link href="/khate/accounts/add" className="bg-white/5 border border-white/10 rounded-2xl p-4 flex flex-col items-center justify-center gap-2 hover:bg-white/10 transition-colors">
                             <Plus className="w-6 h-6 text-emerald-400" />
                             <span className="text-sm font-medium text-white/80">Add Bank Account</span>
                         </Link>
-                        <Link href="/bank/cash" className="bg-white/5 border border-white/10 rounded-2xl p-4 flex flex-col items-center justify-center gap-2 hover:bg-white/10 transition-colors">
+                        <Link href="/khate/accounts/cash" className="bg-white/5 border border-white/10 rounded-2xl p-4 flex flex-col items-center justify-center gap-2 hover:bg-white/10 transition-colors">
                             <Wallet className="w-6 h-6 text-amber-400" />
                             <span className="text-sm font-medium text-white/80">Cash Wallet</span>
                         </Link>
-                        <Link href="/bank/flow" className="bg-white/5 border border-white/10 rounded-2xl p-4 flex flex-col items-center justify-center gap-2 hover:bg-white/10 transition-colors">
+                        <Link href="/khate/accounts/flow" className="bg-white/5 border border-white/10 rounded-2xl p-4 flex flex-col items-center justify-center gap-2 hover:bg-white/10 transition-colors">
                             <History className="w-6 h-6 text-blue-400" />
                             <span className="text-sm font-medium text-white/80">Cash Flow Engine</span>
                         </Link>
-                        <Link href="/bank/idle" className="bg-white/5 border border-white/10 rounded-2xl p-4 flex flex-col items-center justify-center gap-2 hover:bg-white/10 transition-colors">
+                        <Link href="/khate/accounts/idle" className="bg-white/5 border border-white/10 rounded-2xl p-4 flex flex-col items-center justify-center gap-2 hover:bg-white/10 transition-colors">
                             <Scale className="w-6 h-6 text-purple-400" />
                             <span className="text-sm font-medium text-white/80">Idle Money</span>
                         </Link>
@@ -225,7 +225,7 @@ export default function BankHub() {
                                 <Landmark className="w-10 h-10 text-white/20 mx-auto mb-3" />
                                         <h3 className="font-semibold text-white/90 mb-1">You haven&apos;t added any bank accounts yet.</h3>
                                 <p className="text-sm text-white/50 mb-6">Add your first account to see your true liquidity position.</p>
-                                <Link href="/bank/add" className="inline-flex items-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-medium transition-colors">
+                                <Link href="/khate/accounts/add" className="inline-flex items-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-medium transition-colors">
                                     <Plus className="w-4 h-4" /> Add Your First Account
                                 </Link>
                             </div>
@@ -245,7 +245,7 @@ export default function BankHub() {
                                                             {acc.nickname || acc.bankName}
                                                         </p>
                                                         <p className="text-[11px] text-white/40 mt-0.5 uppercase tracking-wider flex items-center gap-2">
-                                                            {acc.accountType} â€¢ {maskAccountNumber(acc.accountLast4)}
+                                                            {acc.accountType} • {maskAccountNumber(acc.accountLast4)}
                                                             <span className={`px-1.5 py-0.5 rounded text-[8px] border font-bold ${acc.status === "active" ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" : acc.status === "dormant" ? "bg-amber-500/10 text-amber-400 border-amber-500/20" : "bg-white/10 text-white/40 border-white/20"}`}>
                                                                 {acc.status}
                                                             </span>
@@ -265,7 +265,7 @@ export default function BankHub() {
                                                 </div>
                                                 <div className="text-right">
                                                     <p className="text-2xl font-bold text-white tracking-tight">
-                                                        <span className="text-white/40 font-normal mr-1">â‚¹</span>
+                                                        <span className="text-white/40 font-normal mr-1">₹</span>
                                                         {acc.latestBalance.toLocaleString("en-IN")}
                                                     </p>
                                                 </div>

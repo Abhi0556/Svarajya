@@ -40,7 +40,7 @@ async function handleGET(request: NextRequest): Promise<NextResponse> {
       bankName: account.bankName,
       accountType: account.accountType,
       nickname: account.nickname,
-      accountLast4: account.accountLast4,
+      accountNumber: account.accountNumber,
       currentBalance: account.currentBalance,
       status: account.status,
       createdAt: account.createdAt.toISOString(),
@@ -48,7 +48,7 @@ async function handleGET(request: NextRequest): Promise<NextResponse> {
     }));
 
     // Calculate metrics
-    const totalBalance = accounts.reduce((sum, acc) => sum + acc.currentBalance, 0);
+    const totalBalance = accounts.reduce((sum, acc) => sum + acc.currentBalance || 0, 0);
     const activeCount = accounts.filter((acc) => acc.status === 'active').length;
     const monthlyIncome = income.reduce((sum, inc) => sum + (inc.isPrimary ? inc.amount : 0), 0);
     const monthlyExpense = expenses.reduce((sum, exp) => sum + exp.amount, 0);
@@ -84,10 +84,10 @@ async function handlePOST(request: NextRequest): Promise<NextResponse> {
   }
 
   try {
-    const data: CreateBankAccountRequest | (UpdateBankAccountRequest & { id?: string }) = await request.json();
+    const data: any = await request.json();
 
     // Validate required fields
-    if (!data.bankName || !data.accountType || !data.accountLast4) {
+    if (!data.bankName || !data.accountType || !data.accountNumber) {
       return errorResponse(
         ErrorCodes.VALIDATION_ERROR,
         'Bank name, account type, and last 4 digits are required',
@@ -103,7 +103,7 @@ async function handlePOST(request: NextRequest): Promise<NextResponse> {
         bankName: data.bankName,
         accountType: data.accountType,
         nickname: data.nickname,
-        accountLast4: data.accountLast4,
+        accountNumber: data.accountNumber,
         currentBalance: data.currentBalance,
         status: data.status,
       });
@@ -113,7 +113,7 @@ async function handlePOST(request: NextRequest): Promise<NextResponse> {
         authContext.userId,
         data.bankName,
         data.accountType,
-        data.accountLast4
+        data.accountNumber
       );
 
       if (duplicate) {
@@ -129,7 +129,7 @@ async function handlePOST(request: NextRequest): Promise<NextResponse> {
         bankName: data.bankName,
         accountType: data.accountType,
         nickname: data.nickname,
-        accountLast4: data.accountLast4,
+        accountNumber: data.accountNumber,
         currentBalance: data.currentBalance || 0,
         status: data.status || 'active',
       });
@@ -141,7 +141,7 @@ async function handlePOST(request: NextRequest): Promise<NextResponse> {
       bankName: account.bankName,
       accountType: account.accountType,
       nickname: account.nickname,
-      accountLast4: account.accountLast4,
+      accountNumber: account.accountNumber,
       currentBalance: account.currentBalance,
       status: account.status,
       createdAt: account.createdAt.toISOString(),

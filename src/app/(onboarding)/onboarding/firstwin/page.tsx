@@ -1,10 +1,11 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect, Suspense } from "react";
 import { motion } from "framer-motion";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Award, Crown } from "lucide-react";
 import { OnboardingStore } from "@/lib/stores/onboardingStore";
+import { createClient } from "@/lib/supabase/client";
 
 const LAST_LOGIN_KEY = "svarajya_last_login";
 
@@ -50,10 +51,15 @@ function FirstWinContent() {
      
     }, []);
 
-    const handleFinish = () => {
+    const handleFinish = async () => {
         if (priority) OnboardingStore.set({ priority });
         localStorage.setItem(LAST_LOGIN_KEY, new Date().toISOString());
-        router.push("/dashboard");
+        // Mark onboarding as completed in Supabase user_metadata (no Prisma DB change)
+        try {
+            const supabase = createClient();
+            await supabase.auth.updateUser({ data: { onboarding_completed: true } });
+        } catch {/* non-critical */}
+        router.push("/rajya");
     };
 
 
@@ -94,9 +100,13 @@ function FirstWinContent() {
                         initial={{ opacity: 0, y: 16 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.6 }}
-                        onClick={() => {
+                        onClick={async () => {
                             localStorage.setItem(LAST_LOGIN_KEY, new Date().toISOString());
-                            router.push("/dashboard");
+                            try {
+                                const supabase = createClient();
+                                await supabase.auth.updateUser({ data: { onboarding_completed: true } });
+                            } catch {/* non-critical */}
+                            router.push("/rajya");
                         }}
                         className="w-full max-w-xs bg-amber-400 text-black font-bold py-4 rounded-xl text-sm flex items-center justify-center gap-2 hover:bg-amber-300 transition-colors"
                     >
@@ -175,11 +185,15 @@ function FirstWinContent() {
                         {PRIORITIES.map(p => (
                             <button
                                 key={p.id}
-                                onClick={() => {
+                                onClick={async () => {
                                     setPriority(p.id);
                                     OnboardingStore.set({ priority: p.id });
                                     localStorage.setItem(LAST_LOGIN_KEY, new Date().toISOString());
-                                    setTimeout(() => router.push("/dashboard"), 300);
+                                    try {
+                                        const supabase = createClient();
+                                        await supabase.auth.updateUser({ data: { onboarding_completed: true } });
+                                    } catch {/* non-critical */}
+                                    setTimeout(() => router.push("/rajya"), 300);
                                 }}
                                 className={`p-3 rounded-xl border text-left transition-all hover:-translate-y-1 ${priority === p.id
                                     ? "bg-amber-400/15 border-amber-400"

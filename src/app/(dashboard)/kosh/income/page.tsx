@@ -1,12 +1,12 @@
-﻿"use client";
+"use client";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Plus } from "lucide-react";
-import { IncomeStore } from "@/lib/stores/incomeStore";
-import { ChaturangaBoard } from "@/components/games/ChaturangaBoard";
-import { IncomeCard } from "@/components/cards/IncomeCard";
-import { PageGuide } from "@/components/shared/PageGuide";
+import { IncomeStore } from "@/lib/incomeStore";
+import { ChaturangaBoard } from "@/components/treasury/ChaturangaBoard";
+import { IncomeCard } from "@/components/treasury/IncomeCard";
+import { PageGuide } from "@/components/ui/PageGuide";
 
 export default function IncomeRegistryPage() {
     const router = useRouter();

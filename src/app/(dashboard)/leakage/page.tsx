@@ -1,10 +1,10 @@
-﻿"use client";
+"use client";
 
 import { useRouter } from "next/navigation";
 import { MicroLearningWrapper } from "@/components/module/MicroLearningWrapper";
 import { SelectGridGame } from "@/components/module/SelectGridGame";
 import { MonitorPlay, Music, Wifi, Box } from "lucide-react";
-import { VideoTutorialPlaceholder } from "@/components/tutorials/TutorialCard";
+import { VideoTutorialPlaceholder } from "@/components/ui/VideoTutorialPlaceholder";
 
 const SUBSCRIPTIONS = [
     { id: 'video', label: 'Video Streaming', icon: <MonitorPlay /> },
@@ -47,8 +47,8 @@ export default function LeakageModule() {
 
             {/* YouTube Tutorial */}
             <div className="mt-6">
-                <p className="text-[10px] text-white/30 uppercase tracking-wider mb-2">ðŸŽ“ Learn More</p>
-                <VideoTutorialPlaceholder youtubeId="PKisHOvFRow" label="Stop wasting money â€” hidden subscriptions & leakages" />
+                <p className="text-[10px] text-white/30 uppercase tracking-wider mb-2">🎓 Learn More</p>
+                <VideoTutorialPlaceholder youtubeId="PKisHOvFRow" label="Stop wasting money — hidden subscriptions & leakages" />
             </div>
         </div>
     );

@@ -1,10 +1,10 @@
-﻿"use client";
+"use client";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
-import { ExpenseStore, formatRupee } from "@/lib/stores/expenseStore";
-import { VideoTutorialPlaceholder } from "@/components/tutorials/TutorialCard";
+import { ExpenseStore, formatRupee } from "@/lib/expenseStore";
+import { VideoTutorialPlaceholder } from "@/components/ui/VideoTutorialPlaceholder";
 
 export default function BudgetPage() {
     const router = useRouter();
@@ -51,14 +51,14 @@ export default function BudgetPage() {
 
                 {/* Tutorial strip */}
                 <div className="bg-[var(--color-rajya-accent)]/8 border border-[var(--color-rajya-accent)]/20 rounded-xl p-3 mb-3">
-                    <p className="text-xs text-[var(--color-rajya-muted)]">ðŸ’¡ <strong className="text-[var(--color-rajya-text)]">Discipline is planned</strong>, not reactive.</p>
+                    <p className="text-xs text-[var(--color-rajya-muted)]">💡 <strong className="text-[var(--color-rajya-text)]">Discipline is planned</strong>, not reactive.</p>
                 </div>
                 <VideoTutorialPlaceholder youtubeId="iWsQY6Ha4OE" label="Budgeting basics for Indian households" />
                 <div className="h-4" />
 
                 {saved && (
                     <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-2.5 mb-4">
-                        <span className="text-xs text-emerald-400">âœ“ Budgets saved.</span>
+                        <span className="text-xs text-emerald-400">✓ Budgets saved.</span>
                     </div>
                 )}
 
@@ -66,7 +66,7 @@ export default function BudgetPage() {
                 <div className="grid grid-cols-3 gap-2 mb-5">
                     <div className="bg-white/3 border border-white/8 rounded-xl p-3 text-center">
                         <p className="text-[10px] text-white/30">Total Budget</p>
-                        <p className="text-sm font-bold text-white/70">{totalBudget > 0 ? formatRupee(totalBudget) : "â€”"}</p>
+                        <p className="text-sm font-bold text-white/70">{totalBudget > 0 ? formatRupee(totalBudget) : "—"}</p>
                     </div>
                     <div className="bg-white/3 border border-white/8 rounded-xl p-3 text-center">
                         <p className="text-[10px] text-white/30">Actual Spend</p>
@@ -75,7 +75,7 @@ export default function BudgetPage() {
                     <div className="bg-white/3 border border-white/8 rounded-xl p-3 text-center">
                         <p className="text-[10px] text-white/30">Adherence</p>
                         <p className={`text-sm font-bold ${overallAdherence > 100 ? "text-red-400" : overallAdherence > 80 ? "text-amber-400" : "text-emerald-400"}`}>
-                            {totalBudget > 0 ? `${overallAdherence}%` : "â€”"}
+                            {totalBudget > 0 ? `${overallAdherence}%` : "—"}
                         </p>
                     </div>
                 </div>
@@ -99,7 +99,7 @@ export default function BudgetPage() {
                     <div className="space-y-1.5 mb-4">
                         {overspent.map(o => (
                             <div key={o.categoryId} className="bg-red-500/10 border border-red-500/20 rounded-xl p-2.5">
-                                <p className="text-xs text-red-400">âš  {o.emoji} {o.name} overspent by {formatRupee(o.spent - o.budget)}</p>
+                                <p className="text-xs text-red-400">⚠ {o.emoji} {o.name} overspent by {formatRupee(o.spent - o.budget)}</p>
                             </div>
                         ))}
                     </div>
@@ -129,8 +129,8 @@ export default function BudgetPage() {
                                     <div className="flex-1">
                                         <label className="text-[10px] text-white/30">Monthly Budget</label>
                                         <div className="relative">
-                                            <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-white/30">â‚¹</span>
-                                            <input type="number" value={cat.budgetAmount || ""} placeholder="â€”"
+                                            <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-white/30">₹</span>
+                                            <input type="number" value={cat.budgetAmount || ""} placeholder="—"
                                                 onChange={e => handleBudgetChange(cat.id, e.target.value)}
                                                 className="w-full bg-white/5 border border-white/10 rounded-lg pl-5 pr-2 py-1.5 text-xs text-white focus:outline-none" />
                                         </div>

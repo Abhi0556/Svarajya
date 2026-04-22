@@ -61,7 +61,7 @@ export default function LinksListPage() {
                             </p>
                         </div>
                     </div>
-                    <button onClick={() => router.push("/identity/links/add")}
+                    <button onClick={() => router.push("/pehchaan/records/links/add")}
                         className="w-9 h-9 rounded-xl bg-amber-400/15 border border-amber-400/30 flex items-center justify-center">
                         <Plus className="w-4 h-4 text-amber-400" />
                     </button>
@@ -79,7 +79,7 @@ export default function LinksListPage() {
                             <Link2 className="w-10 h-10 text-white/10 mb-3" />
                             <p className="text-sm text-white/30 mb-1">No links yet</p>
                             <p className="text-xs text-white/20 text-center mb-4">Link your documents to the services that use them.</p>
-                            <button onClick={() => router.push("/identity/links/add")}
+                            <button onClick={() => router.push("/pehchaan/records/links/add")}
                                 className="bg-amber-400 text-black font-semibold px-6 py-2.5 rounded-xl text-sm">
                                 Create First Link
                             </button>

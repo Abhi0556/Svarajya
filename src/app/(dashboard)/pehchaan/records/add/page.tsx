@@ -1,14 +1,14 @@
-﻿"use client";
+"use client";
 
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, Eye, EyeOff, CheckCircle2 } from "lucide-react";
-import { IdentityStore, DocType } from "@/lib/stores/identityStore";
-import { OnboardingStore } from "@/lib/stores/onboardingStore";
+import { IdentityStore, DocType } from "@/lib/identityStore";
+import { OnboardingStore } from "@/lib/onboardingStore";
 import { FileUploader } from "@/components/vault/FileUploader";
-import { DocumentValidator } from "@/lib/validators/documentValidator";
+import { DocumentValidator } from "@/lib/documentValidation";
 
 const DOC_TYPES: { id: DocType; label: string }[] = [
     { id: "aadhaar", label: "Aadhaar" },
@@ -87,7 +87,7 @@ function AddDocumentForm() {
         ? IdentityStore.maskDocNumber(docNumber, docType)
         : docNumber;
 
-    // â€”â€”â€” Post-save First Win â€”â€”â€”
+    // ——— Post-save First Win ———
     if (saved) {
         return (
             <div className="flex flex-col min-h-screen p-6 pb-24 relative">
@@ -134,13 +134,13 @@ function AddDocumentForm() {
 
                     <div className="w-full space-y-3">
                         <button
-                            onClick={() => router.push(`/identity/doc/${saved.id}`)}
+                            onClick={() => router.push(`/pehchaan/records/doc/${saved.id}`)}
                             className="w-full bg-amber-400 text-black font-semibold py-4 rounded-xl text-sm hover:bg-amber-300 transition-colors"
                         >
                             Strengthen This Seal
                         </button>
                         <button
-                            onClick={() => router.push("/identity")}
+                            onClick={() => router.push("/pehchaan/records")}
                             className="w-full text-white/35 text-sm py-3 hover:text-white/55 transition-colors"
                         >
                             Back to Vault
@@ -151,7 +151,7 @@ function AddDocumentForm() {
         );
     }
 
-    // â€”â€”â€” Stage 1 Form â€”â€”â€”
+    // ——— Stage 1 Form ———
     return (
         <div className="flex flex-col min-h-screen p-6 pb-24 relative">
             <div className="absolute inset-0 bg-gradient-to-b from-slate-950 via-[#0a1628] to-slate-950 pointer-events-none" />
@@ -195,7 +195,7 @@ function AddDocumentForm() {
                         </div>
                     </div>
 
-                    {/* Doc number â€” masked */}
+                    {/* Doc number — masked */}
                     <div className="space-y-2">
                         <label className="text-xs text-white/40 uppercase tracking-wider">Document Number</label>
                         <div className="relative">
@@ -245,7 +245,7 @@ function AddDocumentForm() {
                         />
                         {isNameMismatched && (
                             <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="mt-3 bg-amber-500/10 border border-amber-500/20 rounded-xl p-3">
-                                <p className="text-xs text-amber-400/90 mb-2">âš  Name differs from Foundation profile ({profileName}).</p>
+                                <p className="text-xs text-amber-400/90 mb-2">⚠ Name differs from Foundation profile ({profileName}).</p>
                                 <input
                                     type="text"
                                     placeholder="Reason (e.g., Maiden name, Spelling error on doc)"
@@ -272,18 +272,18 @@ function AddDocumentForm() {
 
                     {/* Security */}
                     <div className="bg-amber-400/5 border border-amber-400/15 rounded-xl p-3 flex items-start gap-2">
-                        <span className="text-amber-400 text-sm">ðŸ”’</span>
+                        <span className="text-amber-400 text-sm">🔒</span>
                         <p className="text-xs text-white/40">Stored locally. Not shared without consent.</p>
                     </div>
 
                     {error && (
                         <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-red-400 text-xs">
-                            âš  {error}
+                            ⚠ {error}
                         </motion.p>
                     )}
                     {warning && !error && (
                         <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-amber-400 text-xs bg-amber-400/10 p-2 rounded-lg border border-amber-400/20">
-                            âš  {warning} Tap Save again to proceed anyway.
+                            ⚠ {warning} Tap Save again to proceed anyway.
                         </motion.p>
                     )}
                 </div>

@@ -1,9 +1,9 @@
-﻿"use client";
+"use client";
 
 import { useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { Upload, FileText, X, Cloud, CloudOff, Loader2 } from "lucide-react";
-import { Vault, VaultFolder } from "@/lib/services/documentService";
+import { Vault, VaultFolder } from "@/lib/vault";
 import { CloudDriveSync } from "@/lib/cloudDriveSync";
 import { createClient } from "@/lib/supabase/client";
 
@@ -138,7 +138,7 @@ export function FileUploader({
                             <div className="text-center">
                                 <p className="text-sm text-white/60">{label}</p>
                                 <p className="text-xs text-white/30 mt-0.5">Tap to browse or drag & drop</p>
-                                <p className="text-[10px] text-white/20 mt-1">Images & PDFs â€¢ Stored on this device</p>
+                                <p className="text-[10px] text-white/20 mt-1">Images & PDFs • Stored on this device</p>
                             </div>
                         </>
                     )}
@@ -152,7 +152,7 @@ export function FileUploader({
                 >
                     <div className="flex items-start gap-3">
                         {preview ? (
-                            // blob: URL from URL.createObjectURL â€” cannot be optimized by next/image
+                            // blob: URL from URL.createObjectURL — cannot be optimized by next/image
                             // eslint-disable-next-line @next/next/no-img-element
                             <img src={preview} alt="" className="w-12 h-12 rounded-lg object-cover border border-white/10" />
                         ) : (
@@ -162,7 +162,7 @@ export function FileUploader({
                         )}
                         <div className="flex-1 min-w-0">
                             <p className="text-sm text-white font-medium truncate">{uploaded.name}</p>
-                            <p className="text-xs text-emerald-400 mt-0.5">âœ“ Saved to device</p>
+                            <p className="text-xs text-emerald-400 mt-0.5">✓ Saved to device</p>
                         </div>
                         <button onClick={() => { setUploaded(null); setPreview(null); }} className="text-white/30 hover:text-white/60">
                             <X className="w-4 h-4" />

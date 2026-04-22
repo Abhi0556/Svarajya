@@ -1,11 +1,11 @@
-﻿"use client";
+"use client";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { MicroLearningWrapper } from "@/components/module/MicroLearningWrapper";
 import { Users, FileMinus, FileCheck } from "lucide-react";
 import { motion } from "framer-motion";
-import { VideoTutorialPlaceholder } from "@/components/tutorials/TutorialCard";
+import { VideoTutorialPlaceholder } from "@/components/ui/VideoTutorialPlaceholder";
 
 export default function MitraModule() {
     const router = useRouter();
@@ -27,7 +27,7 @@ export default function MitraModule() {
             <MicroLearningWrapper
                 moduleTitle="The Mitra (Legacy & Succession)"
                 contextText="A kingdom without a designated heir invites chaos the moment the king falls. Your assets mean nothing if your family cannot legally access them."
-                insightText="In India, over â‚¹82,000 Crores (approx $10 Billion) lies unclaimed in banks and insurance companies simply because nominees were not updated."
+                insightText="In India, over ₹82,000 Crores (approx $10 Billion) lies unclaimed in banks and insurance companies simply because nominees were not updated."
                 quizQuestion="Are nominees the final legal heirs to an asset?"
                 quizOptions={[
                     { label: "Yes, the nominee owns the money instantly", isCorrect: false },
@@ -83,7 +83,7 @@ export default function MitraModule() {
                                     <FileMinus className="w-16 h-16 mx-auto text-[var(--color-rajya-danger)]" />
                                     <h3 className="text-xl text-[var(--color-rajya-text)] font-display">Kingdom at Risk</h3>
                                     <p className="text-[var(--color-rajya-danger)]/90 text-sm bg-[var(--color-rajya-danger)]/10 p-4 rounded-xl border border-[var(--color-rajya-danger)]/20">
-                                        Without a written decree, the law â€” not your wishes â€” will divide your Rajya. This is your highest priority vulnerability.
+                                        Without a written decree, the law — not your wishes — will divide your Rajya. This is your highest priority vulnerability.
                                     </p>
                                 </div>
                             )}
@@ -101,8 +101,8 @@ export default function MitraModule() {
 
             {/* YouTube Tutorial */}
             <div className="mt-6">
-                <p className="text-[10px] text-white/30 uppercase tracking-wider mb-2">ðŸŽ“ Learn More</p>
-                <VideoTutorialPlaceholder youtubeId="GnxYjBU9E_U" label="How to write a Will in India â€” estate planning basics" />
+                <p className="text-[10px] text-white/30 uppercase tracking-wider mb-2">🎓 Learn More</p>
+                <VideoTutorialPlaceholder youtubeId="GnxYjBU9E_U" label="How to write a Will in India — estate planning basics" />
             </div>
         </div>
     );

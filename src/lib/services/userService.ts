@@ -92,7 +92,7 @@ class UserService extends BaseService<User, CreateUserInput, UpdateUserInput> {
         where: { id: userId },
         include: {
           familyMembers: true,
-          educations: true,
+          education: true,
           identityRecords: true,
           incomeStreams: true,
           expenses: true,

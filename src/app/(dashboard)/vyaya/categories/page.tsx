@@ -1,17 +1,17 @@
-﻿"use client";
+"use client";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Plus, X } from "lucide-react";
-import { ExpenseStore, formatRupee } from "@/lib/stores/expenseStore";
-import { VideoTutorialPlaceholder } from "@/components/tutorials/TutorialCard";
+import { ExpenseStore, formatRupee } from "@/lib/expenseStore";
+import { VideoTutorialPlaceholder } from "@/components/ui/VideoTutorialPlaceholder";
 
 export default function CategoriesPage() {
     const router = useRouter();
     const [categories, setCategories] = useState(ExpenseStore.getCategories());
     const [showAdd, setShowAdd] = useState(false);
     const [newName, setNewName] = useState("");
-    const [newEmoji, setNewEmoji] = useState("ðŸ“Œ");
+    const [newEmoji, setNewEmoji] = useState("📌");
     const [error, setError] = useState("");
     const [saved, setSaved] = useState(false);
 
@@ -34,10 +34,10 @@ export default function CategoriesPage() {
         if (categories.some(c => c.name.toLowerCase() === newName.trim().toLowerCase())) {
             setError("Category name already exists."); return;
         }
-        ExpenseStore.addCustomCategory(newName.trim(), newEmoji || "ðŸ“Œ");
+        ExpenseStore.addCustomCategory(newName.trim(), newEmoji || "📌");
         setCategories(ExpenseStore.getCategories());
         setNewName("");
-        setNewEmoji("ðŸ“Œ");
+        setNewEmoji("📌");
         setShowAdd(false);
         setError("");
     };
@@ -66,7 +66,7 @@ export default function CategoriesPage() {
 
                 {/* Tutorial strip */}
                 <div className="bg-[var(--color-rajya-accent)]/8 border border-[var(--color-rajya-accent)]/20 rounded-xl p-3 mb-3">
-                    <p className="text-xs text-[var(--color-rajya-muted)]">ðŸ’¡ <strong className="text-[var(--color-rajya-text)]">Money doesn&apos;t leak in one big hole.</strong> It leaks in small drains.</p>
+                    <p className="text-xs text-[var(--color-rajya-muted)]">💡 <strong className="text-[var(--color-rajya-text)]">Money doesn&apos;t leak in one big hole.</strong> It leaks in small drains.</p>
                 </div>
                 <VideoTutorialPlaceholder youtubeId="iWsQY6Ha4OE" label="Expense categorization basics" />
                 <div className="h-4" />
@@ -74,19 +74,19 @@ export default function CategoriesPage() {
                 {/* Income + categories warning */}
                 {incomeExists && (
                     <div className="bg-amber-400/10 border border-amber-400/20 rounded-xl p-2.5 mb-4">
-                        <p className="text-xs text-amber-400">âš  Without expense mapping, Treasury visibility is partial.</p>
+                        <p className="text-xs text-amber-400">⚠ Without expense mapping, Treasury visibility is partial.</p>
                     </div>
                 )}
 
                 {error && (
                     <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-2.5 mb-4">
-                        <span className="text-xs text-red-400">âš  {error}</span>
+                        <span className="text-xs text-red-400">⚠ {error}</span>
                     </div>
                 )}
 
                 {saved && (
                     <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-2.5 mb-4">
-                        <span className="text-xs text-emerald-400">âœ“ Categories saved.</span>
+                        <span className="text-xs text-emerald-400">✓ Categories saved.</span>
                     </div>
                 )}
 
@@ -116,15 +116,15 @@ export default function CategoriesPage() {
                                         <div className="flex-1">
                                             <label className="text-[10px] text-white/30">Budget (optional)</label>
                                             <div className="relative">
-                                                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-white/30">â‚¹</span>
-                                                <input type="number" value={cat.budgetAmount || ""} placeholder="â€”"
+                                                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-white/30">₹</span>
+                                                <input type="number" value={cat.budgetAmount || ""} placeholder="—"
                                                     onChange={e => handleBudgetChange(cat.id, e.target.value)}
                                                     className="w-full bg-white/5 border border-white/10 rounded-lg pl-5 pr-2 py-1.5 text-xs text-white focus:outline-none" />
                                             </div>
                                         </div>
                                         <div className="text-right">
                                             <p className="text-[10px] text-white/30">This month</p>
-                                            <p className="text-xs text-white/50">{spent > 0 ? formatRupee(spent) : "â‚¹â€”"}</p>
+                                            <p className="text-xs text-white/50">{spent > 0 ? formatRupee(spent) : "₹—"}</p>
                                         </div>
                                     </div>
                                 )}

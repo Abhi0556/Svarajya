@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { BankStore } from "@/lib/stores/bankStore";
-import { fetchBankSummary, saveCashWallet } from "@/lib/services/bankService";
+import { fetchBankSummary, saveCashWallet } from "@/lib/bankApi";
 import { ArrowLeft, Wallet, ShieldAlert, Coins, CheckCircle2 } from "lucide-react";
 
 export default function CashWalletPage() {
@@ -76,7 +76,7 @@ export default function CashWalletPage() {
 
         setSuccess(true);
         setTimeout(() => {
-            router.push("/bank");
+            router.push("/khate/accounts");
         }, 1500);
     };
 

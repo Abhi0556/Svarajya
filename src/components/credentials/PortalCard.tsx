@@ -12,9 +12,9 @@ interface PortalCardProps {
 
 export function PortalCard({ portal, healthScore, emergencyReady, nowMs }: PortalCardProps) {
     const router = useRouter();
-    const catMeta = PORTAL_CATEGORIES.find((c: any) => c.id === portal.category);
+    const catMeta = PORTAL_CATEGORIES.find(c => c.id === portal.category);
     const access = CredentialStore.getAccessForPortal(portal.id);
-    const hasExecutor = access.some((a: any) => a.accessLevel === "executor");
+    const hasExecutor = access.some(a => a.accessLevel === "executor");
     const maskedLogin = CredentialStore.maskLoginId(portal.loginId);
 
     // Last reviewed text
@@ -30,7 +30,7 @@ export function PortalCard({ portal, healthScore, emergencyReady, nowMs }: Porta
 
     return (
         <button
-            onClick={() => router.push(`/credentials/portal/${portal.id}`)}
+            onClick={() => router.push(`/dwaar/portals/portal/${portal.id}`)}
             className="w-full text-left bg-white/5 border border-white/10 hover:border-amber-400/30 rounded-xl p-4 transition-all"
         >
             <div className="flex items-start gap-3">

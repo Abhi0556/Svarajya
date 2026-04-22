@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -7,18 +7,18 @@ import {
     CredentialStore, PORTAL_CATEGORIES, PortalCategory, PasswordStorageMode, TwoFAStatus,
     CATEGORY_TUTORIALS, TAX_SUBCATEGORIES, UTILITY_SUBCATEGORIES, DEMAT_SUBCATEGORIES, INDIAN_BANKS,
     TwoFAType
-} from "@/lib/stores/credentialStore";
-import { IdentityStore } from "@/lib/stores/identityStore";
-import { OnboardingStore } from "@/lib/stores/onboardingStore";
+} from "@/lib/credentialStore";
+import { IdentityStore } from "@/lib/identityStore";
+import { OnboardingStore } from "@/lib/onboardingStore";
 import { MasterPassphraseModal } from "@/components/credentials/MasterPassphraseModal";
-import { VideoTutorialPlaceholder } from "@/components/tutorials/TutorialCard";
-import { validateControlledEmail, validateIndianMobile } from "@/lib/validators/contactValidator";
+import { VideoTutorialPlaceholder } from "@/components/ui/VideoTutorialPlaceholder";
+import { validateControlledEmail, validateIndianMobile } from "@/lib/contactValidation";
 
 export default function AddPortalPage() {
     const router = useRouter();
     const [step, setStep] = useState(1);
 
-    // Step 1 â€” Category & Platform
+    // Step 1 — Category & Platform
     const [platformName, setPlatformName] = useState("");
     const [category, setCategory] = useState<PortalCategory | "">("");
     const [subcategory, setSubcategory] = useState("");
@@ -31,7 +31,7 @@ export default function AddPortalPage() {
     const initialMobiles = initialContacts.filter(c => c.type === "mobile");
     const initialEmails = initialContacts.filter(c => c.type === "email");
 
-    // Step 2 â€” Credentials & Category-specific
+    // Step 2 — Credentials & Category-specific
     const [loginId, setLoginId] = useState("");
     const [registeredMobileId, setRegisteredMobileId] = useState(initialMobiles[0]?.id || "");
     const [registeredEmailId, setRegisteredEmailId] = useState(initialEmails[0]?.id || "");
@@ -155,7 +155,7 @@ export default function AddPortalPage() {
 
         let encryptedPassword = undefined;
         if (passwordMode === "encrypted" && rawPassword) {
-            const { encryptString } = await import("@/lib/utils/crypto");
+            const { encryptString } = await import("@/lib/crypto");
             const result = await encryptString(rawPassword, "session-key-" + Date.now());
             encryptedPassword = {
                 version: 1 as const,
@@ -236,7 +236,7 @@ export default function AddPortalPage() {
         return insights;
     };
 
-    // â€”â€”â€” Success Screen â€”â€”â€”
+    // ——— Success Screen ———
     if (saved) {
         const insights = getPostSaveInsights();
         return (
@@ -264,7 +264,7 @@ export default function AddPortalPage() {
                     )}
 
                     <div className="w-full max-w-sm space-y-3">
-                        <button onClick={() => router.push("/credentials/access")}
+                        <button onClick={() => router.push("/dwaar/portals/access")}
                             className="w-full bg-amber-400 text-black font-semibold py-4 rounded-xl text-sm">
                             Assign Access
                         </button>
@@ -272,7 +272,7 @@ export default function AddPortalPage() {
                             className="w-full bg-white/8 border border-white/15 text-white/70 py-3 rounded-xl text-sm">
                             Add Another Portal
                         </button>
-                        <button onClick={() => router.push("/credentials")}
+                        <button onClick={() => router.push("/dwaar/portals")}
                             className="w-full text-center text-xs text-white/40 py-2">
                             Back to Kunji Vault
                         </button>
@@ -305,25 +305,25 @@ export default function AddPortalPage() {
                     <div className={`flex-1 h-1 rounded-full ${step >= 2 ? "bg-amber-400" : "bg-white/10"}`} />
                 </div>
 
-                {/* Category-specific micro-tutorial â€” shown after category selection */}
+                {/* Category-specific micro-tutorial — shown after category selection */}
                 {tutorial && (
                     <div className="mb-4 space-y-3">
                         <div className="bg-[var(--color-rajya-accent)]/8 border border-[var(--color-rajya-accent)]/20 rounded-xl p-3">
                             <p className="text-xs text-[var(--color-rajya-muted)]">
-                                ðŸ’¡ <strong className="text-[var(--color-rajya-text)]">{tutorial.title}</strong> â€” {tutorial.message}
+                                💡 <strong className="text-[var(--color-rajya-text)]">{tutorial.title}</strong> — {tutorial.message}
                             </p>
                         </div>
-                        <VideoTutorialPlaceholder youtubeId={tutorial.youtubeId} label={tutorial.title + " â€” tutorial"} />
+                        <VideoTutorialPlaceholder youtubeId={tutorial.youtubeId} label={tutorial.title + " — tutorial"} />
                     </div>
                 )}
 
                 {error && (
                     <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-2.5 mb-4">
-                        <span className="text-xs text-red-400">âš  {error}</span>
+                        <span className="text-xs text-red-400">⚠ {error}</span>
                     </div>
                 )}
 
-                {/* â€”â€”â€” STEP 1: Category & Platform â€”â€”â€” */}
+                {/* ——— STEP 1: Category & Platform ——— */}
                 {step === 1 && (
                     <div className="flex-1 space-y-5">
                         {/* Category picker */}
@@ -341,7 +341,7 @@ export default function AddPortalPage() {
                             </div>
                         </div>
 
-                        {/* Subcategory â€” Tax */}
+                        {/* Subcategory — Tax */}
                         {category === "tax" && (
                             <div className="space-y-2">
                                 <label className="text-xs text-white/40">Portal Type *</label>
@@ -358,7 +358,7 @@ export default function AddPortalPage() {
                             </div>
                         )}
 
-                        {/* Subcategory â€” Utility */}
+                        {/* Subcategory — Utility */}
                         {(category === "utility" || category === "subscription") && (
                             <div className="space-y-2">
                                 <label className="text-xs text-white/40">Type</label>
@@ -375,7 +375,7 @@ export default function AddPortalPage() {
                             </div>
                         )}
 
-                        {/* Subcategory â€” Demat */}
+                        {/* Subcategory — Demat */}
                         {category === "demat" && (
                             <div className="space-y-2">
                                 <label className="text-xs text-white/40">Platform Type</label>
@@ -402,7 +402,7 @@ export default function AddPortalPage() {
                                 className="w-full bg-white/6 border border-white/15 rounded-xl px-3 py-3 text-sm text-white placeholder-white/20 focus:outline-none focus:border-amber-400/60" />
                         </div>
 
-                        {/* Custom Service Name â€” other-specific, shown in Step 1 */}
+                        {/* Custom Service Name — other-specific, shown in Step 1 */}
                         {category === "other" && (
                             <div className="space-y-2">
                                 <label className="text-xs text-white/40">Custom Service Name <span className="text-amber-400">*</span></label>
@@ -414,7 +414,7 @@ export default function AddPortalPage() {
                             </div>
                         )}
 
-                        {/* Bank name â€” bank-specific */}
+                        {/* Bank name — bank-specific */}
                         {category === "bank" && (
                             <div className="space-y-2">
                                 <label className="text-xs text-white/40">Bank Name</label>
@@ -424,7 +424,7 @@ export default function AddPortalPage() {
                                     {INDIAN_BANKS.map(b => <option key={b} value={b}>{b}</option>)}
                                 </select>
                                 {duplicateBank && (
-                                    <p className="text-[10px] text-amber-400">âš  You already have a portal saved for {bankName}.</p>
+                                    <p className="text-[10px] text-amber-400">⚠ You already have a portal saved for {bankName}.</p>
                                 )}
                             </div>
                         )}
@@ -436,7 +436,7 @@ export default function AddPortalPage() {
                                 onChange={e => setWebsiteUrl(e.target.value)}
                                 className="w-full bg-white/6 border border-white/15 rounded-xl px-3 py-3 text-sm text-white placeholder-white/20 focus:outline-none focus:border-amber-400/60" />
                             {duplicateUrl && (
-                                <p className="text-[10px] text-amber-400">âš  A portal with this URL already exists in your vault.</p>
+                                <p className="text-[10px] text-amber-400">⚠ A portal with this URL already exists in your vault.</p>
                             )}
                         </div>
 
@@ -456,7 +456,7 @@ export default function AddPortalPage() {
                     </div>
                 )}
 
-                {/* â€”â€”â€” STEP 2: Credentials & Category-Specific â€”â€”â€” */}
+                {/* ——— STEP 2: Credentials & Category-Specific ——— */}
                 {step === 2 && (
                     <div className="flex-1 space-y-4">
                         {/* Login ID */}
@@ -520,7 +520,7 @@ export default function AddPortalPage() {
                                 className="w-full bg-white/6 border border-white/15 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-amber-400/60" />
                         </div>
 
-                        {/* â€”â€”â€” BANK-specific fields â€”â€”â€” */}
+                        {/* ——— BANK-specific fields ——— */}
                         {category === "bank" && (
                             <>
                                 <div className="space-y-2">
@@ -543,7 +543,7 @@ export default function AddPortalPage() {
                             </>
                         )}
 
-                        {/* â€”â€”â€” TAX-specific fields â€”â€”â€” */}
+                        {/* ——— TAX-specific fields ——— */}
                         {category === "tax" && (
                             <>
                                 <div className="space-y-2">
@@ -561,7 +561,7 @@ export default function AddPortalPage() {
                             </>
                         )}
 
-                        {/* â€”â€”â€” INSURANCE-specific fields â€”â€”â€” */}
+                        {/* ——— INSURANCE-specific fields ——— */}
                         {category === "insurance" && (
                             <>
                                 <div className="space-y-2">
@@ -581,7 +581,7 @@ export default function AddPortalPage() {
                             </>
                         )}
 
-                        {/* â€”â€”â€” DEMAT/INVESTMENT-specific fields â€”â€”â€” */}
+                        {/* ——— DEMAT/INVESTMENT-specific fields ——— */}
                         {(category === "demat" || category === "investment") && (
                             <div className="space-y-2">
                                 <label className="text-xs text-white/40">Linked Investment Account <span className="text-white/20">(Module 7)</span></label>
@@ -589,7 +589,7 @@ export default function AddPortalPage() {
                             </div>
                         )}
 
-                        {/* â€”â€”â€” SUBSCRIPTION/UTILITY-specific fields â€”â€”â€” */}
+                        {/* ——— SUBSCRIPTION/UTILITY-specific fields ——— */}
                         {(category === "subscription" || category === "utility") && (
                             <>
                                 <div className="space-y-2">
@@ -607,7 +607,7 @@ export default function AddPortalPage() {
                             </>
                         )}
 
-                        {/* â€”â€”â€” OTHER-specific fields â€”â€”â€” */}
+                        {/* ——— OTHER-specific fields ——— */}
                         {category === "other" && (
                             <>
                                 <div className="space-y-2">
@@ -654,7 +654,7 @@ export default function AddPortalPage() {
                             </>
                         )}
 
-                        {/* Password strategy â€” shown for ALL categories */}
+                        {/* Password strategy — shown for ALL categories */}
                         <div className="space-y-2">
                             <label className="text-xs text-white/40">Password Strategy *</label>
                             <div className="grid grid-cols-2 gap-2">
@@ -662,14 +662,14 @@ export default function AddPortalPage() {
                                     className={`px-3 py-3 rounded-xl border text-xs transition-all ${passwordMode === "not_stored"
                                         ? "bg-amber-400/15 border-amber-400 text-amber-400"
                                         : "bg-white/5 border-white/10 text-white/40"}`}>
-                                    ðŸ”’ Not Stored
+                                    🔒 Not Stored
                                     <span className="block text-[10px] mt-0.5 opacity-60">(Recommended)</span>
                                 </button>
                                 <button onClick={() => setPasswordMode("encrypted")}
                                     className={`px-3 py-3 rounded-xl border text-xs transition-all ${passwordMode === "encrypted"
                                         ? "bg-amber-400/15 border-amber-400 text-amber-400"
                                         : "bg-white/5 border-white/10 text-white/40"}`}>
-                                    ðŸ” Store Encrypted
+                                    🔐 Store Encrypted
                                     <span className="block text-[10px] mt-0.5 opacity-60">In Vault</span>
                                 </button>
                             </div>
@@ -677,13 +677,13 @@ export default function AddPortalPage() {
                                 <p className="text-[10px] text-white/25 italic">Remember to store your password securely elsewhere.</p>
                             )}
                             {passwordMode === "encrypted" && (
-                                <input type="password" placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" value={rawPassword}
+                                <input type="password" placeholder="••••••••" value={rawPassword}
                                     onChange={e => setRawPassword(e.target.value)}
                                     className="w-full bg-white/6 border border-white/15 rounded-xl px-3 py-2.5 text-sm text-white placeholder-white/20 focus:outline-none focus:border-amber-400/60" />
                             )}
                         </div>
 
-                        {/* 2FA â€” shown for non-bank (bank has its own 2FA type picker) */}
+                        {/* 2FA — shown for non-bank (bank has its own 2FA type picker) */}
                         {category !== "bank" && (
                             <div className="space-y-2">
                                 <label className="text-xs text-white/40">2FA Enabled</label>

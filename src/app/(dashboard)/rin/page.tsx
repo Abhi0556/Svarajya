@@ -1,9 +1,9 @@
-﻿"use client";
+"use client";
 
 import { useRouter } from "next/navigation";
 import { MicroLearningWrapper } from "@/components/module/MicroLearningWrapper";
 import { NumberInputGame } from "@/components/module/NumberInputGame";
-import { VideoTutorialPlaceholder } from "@/components/tutorials/TutorialCard";
+import { VideoTutorialPlaceholder } from "@/components/ui/VideoTutorialPlaceholder";
 
 export default function RinModule() {
     const router = useRouter();
@@ -37,8 +37,8 @@ export default function RinModule() {
 
             {/* YouTube Tutorial */}
             <div className="mt-6">
-                <p className="text-[10px] text-white/30 uppercase tracking-wider mb-2">ðŸŽ“ Learn More</p>
-                <VideoTutorialPlaceholder youtubeId="_XBbgOFKnMs" label="How to become debt free â€” EMI, loans & credit card traps" />
+                <p className="text-[10px] text-white/30 uppercase tracking-wider mb-2">🎓 Learn More</p>
+                <VideoTutorialPlaceholder youtubeId="_XBbgOFKnMs" label="How to become debt free — EMI, loans & credit card traps" />
             </div>
         </div>
     );

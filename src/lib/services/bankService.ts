@@ -5,11 +5,11 @@ import { BaseService } from './baseService';
 export interface CreateBankAccountInput {
   bankName: string;
   accountType: string;
-  accountLast4: string;
+  accountNumber: string;
   nickname?: string;
   status?: string;
   openingBalance: number;
-  latestBalance: number;
+  currentBalance: number;
   latestBalanceAsOf: Date;
 }
 
@@ -88,7 +88,7 @@ class BankAccountService extends BaseService<BankAccount, CreateBankAccountInput
     try {
       const result = await prisma.bankAccount.aggregate({
         where: { userId },
-        _sum: { latestBalance: true },
+        _sum: { currentBalance: true },
       });
 
       return result._sum.latestBalance || 0;
@@ -108,7 +108,7 @@ class BankAccountService extends BaseService<BankAccount, CreateBankAccountInput
           userId,
           status: 'active',
         },
-        _sum: { latestBalance: true },
+        _sum: { currentBalance: true },
       });
 
       return result._sum.latestBalance || 0;
@@ -131,7 +131,7 @@ class BankAccountService extends BaseService<BankAccount, CreateBankAccountInput
       return await prisma.bankAccount.update({
         where: { id },
         data: {
-          latestBalance: newBalance,
+          currentBalance: newBalance,
           latestBalanceAsOf: asOfDate,
         },
       });
@@ -165,7 +165,7 @@ class BankAccountService extends BaseService<BankAccount, CreateBankAccountInput
     userId: string,
     bankName: string,
     accountType: string,
-    accountLast4: string
+    accountNumber: string
   ): Promise<BankAccount | null> {
     try {
       return await prisma.bankAccount.findFirst({

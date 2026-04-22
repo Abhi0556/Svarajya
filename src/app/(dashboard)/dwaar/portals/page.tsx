@@ -1,15 +1,15 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Lock, Unlock, Key } from "lucide-react";
-import { CredentialStore, PORTAL_CATEGORIES } from "@/lib/stores/credentialStore";
-import { IdentityStore } from "@/lib/stores/identityStore";
+import { CredentialStore, PORTAL_CATEGORIES } from "@/lib/credentialStore";
+import { IdentityStore } from "@/lib/identityStore";
 import { KeyStabilityMeter } from "@/components/credentials/KeyStabilityMeter";
 import { PortalCard } from "@/components/credentials/PortalCard";
 import { MasterPassphraseModal } from "@/components/credentials/MasterPassphraseModal";
-import { VideoTutorialPlaceholder } from "@/components/tutorials/TutorialCard";
-import { PageGuide } from "@/components/shared/PageGuide";
+import { VideoTutorialPlaceholder } from "@/components/ui/VideoTutorialPlaceholder";
+import { PageGuide } from "@/components/ui/PageGuide";
 
 function crossDeps() {
     return {
@@ -71,8 +71,8 @@ export default function KeyChamberHub() {
                 {/* Section Guide */}
                 <PageGuide
                     title="What is Kunji?"
-                    description="Organize your login credentials â€” bank portals, tax sites, insurance, investments, and more. Record who has access, track 2FA, and prepare for emergencies."
-                    actions={[{ emoji: "ðŸ”‘", label: "Add portals" }, { emoji: "ðŸ›¡ï¸", label: "Assign access" }, { emoji: "ðŸ“Š", label: "Track health" }]}
+                    description="Organize your login credentials — bank portals, tax sites, insurance, investments, and more. Record who has access, track 2FA, and prepare for emergencies."
+                    actions={[{ emoji: "🔑", label: "Add portals" }, { emoji: "🛡️", label: "Assign access" }, { emoji: "📊", label: "Track health" }]}
                 />
                 <div className="h-4" />
 
@@ -95,7 +95,7 @@ export default function KeyChamberHub() {
                     <div className="flex gap-2 mt-3 flex-wrap">
                         {unlockedMilestones.map(m => (
                             <span key={m.id} className="text-[10px] bg-amber-400/10 border border-amber-400/20 rounded-full px-2.5 py-1 text-amber-400/70">
-                                ðŸ† {m.label}
+                                🏆 {m.label}
                             </span>
                         ))}
                     </div>
@@ -105,15 +105,15 @@ export default function KeyChamberHub() {
                 {portals.length > 0 && (
                     <div className="mt-4 bg-white/3 border border-white/8 rounded-xl p-3.5 space-y-1.5">
                         <p className="text-[10px] text-white/30 uppercase tracking-wider mb-2">System Insights</p>
-                        <p className="text-xs text-white/50">ðŸ“Š {insights.totalPortals} active portal{insights.totalPortals > 1 ? "s" : ""} recorded</p>
+                        <p className="text-xs text-white/50">📊 {insights.totalPortals} active portal{insights.totalPortals > 1 ? "s" : ""} recorded</p>
                         {insights.portalsWithNoExecutor > 0 && (
-                            <p className="text-xs text-amber-400/70">âš  {insights.portalsWithNoExecutor} portal{insights.portalsWithNoExecutor > 1 ? "s have" : " has"} no executor assigned</p>
+                            <p className="text-xs text-amber-400/70">⚠ {insights.portalsWithNoExecutor} portal{insights.portalsWithNoExecutor > 1 ? "s have" : " has"} no executor assigned</p>
                         )}
                         {insights.portalsMissingAccess > 0 && (
-                            <p className="text-xs text-amber-400/70">âš  {insights.portalsMissingAccess} portal{insights.portalsMissingAccess > 1 ? "s have" : " has"} no access assigned at all</p>
+                            <p className="text-xs text-amber-400/70">⚠ {insights.portalsMissingAccess} portal{insights.portalsMissingAccess > 1 ? "s have" : " has"} no access assigned at all</p>
                         )}
                         {insights.portalsNotReviewed > 0 && (
-                            <p className="text-xs text-red-400/70">âš  {insights.portalsNotReviewed} portal{insights.portalsNotReviewed > 1 ? "s" : ""} not reviewed in over 1 year</p>
+                            <p className="text-xs text-red-400/70">⚠ {insights.portalsNotReviewed} portal{insights.portalsNotReviewed > 1 ? "s" : ""} not reviewed in over 1 year</p>
                         )}
                     </div>
                 )}
@@ -126,10 +126,10 @@ export default function KeyChamberHub() {
                     const subPortals = portals.filter(p => p.category === "subscription");
                     const bankPortals = portals.filter(p => p.category === "bank");
 
-                    if (taxPortals.length === 0) warnings.push({ emoji: "ðŸ§¾", message: "Compliance Gate Incomplete â€” no tax portals added." });
-                    if (insurancePortals.some(p => !p.nomineeAwareness)) warnings.push({ emoji: "ðŸ›¡ï¸", message: "Insurance portal exists without nominee awareness flagged." });
-                    if (subPortals.some(p => !p.renewalDate)) warnings.push({ emoji: "ðŸ“¦", message: "Subscription exists without renewal date â€” risk of missed charges." });
-                    if (bankPortals.some(p => !p.linkedFamilyMemberId)) warnings.push({ emoji: "ðŸ¦", message: "Bank portal has no executor assigned for emergencies." });
+                    if (taxPortals.length === 0) warnings.push({ emoji: "🧾", message: "Compliance Gate Incomplete — no tax portals added." });
+                    if (insurancePortals.some(p => !p.nomineeAwareness)) warnings.push({ emoji: "🛡️", message: "Insurance portal exists without nominee awareness flagged." });
+                    if (subPortals.some(p => !p.renewalDate)) warnings.push({ emoji: "📦", message: "Subscription exists without renewal date — risk of missed charges." });
+                    if (bankPortals.some(p => !p.linkedFamilyMemberId)) warnings.push({ emoji: "🏦", message: "Bank portal has no executor assigned for emergencies." });
 
                     if (warnings.length === 0) return null;
                     return (
@@ -151,7 +151,7 @@ export default function KeyChamberHub() {
                             <Key className="w-10 h-10 text-white/10 mb-3" />
                             <p className="text-sm text-white/50 mb-1 font-medium">No Portals Added Yet</p>
                             <p className="text-xs text-white/40 text-center mb-5">Start organizing your digital access for clarity and emergency readiness.</p>
-                            <button onClick={() => router.push("/credentials/add")}
+                            <button onClick={() => router.push("/dwaar/portals/add")}
                                 className="bg-amber-400 text-black font-semibold px-6 py-3 rounded-xl text-sm">
                                 Add First Portal
                             </button>
@@ -180,11 +180,11 @@ export default function KeyChamberHub() {
                 {/* Nav buttons */}
                 <div className="space-y-3 mt-5">
                     <div className="grid grid-cols-2 gap-3">
-                        <button onClick={() => router.push("/credentials/access")} className="bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-xs text-white/50 hover:border-white/25 transition-colors">
-                            ðŸ›¡ï¸ Manage Access
+                        <button onClick={() => router.push("/dwaar/portals/access")} className="bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-xs text-white/50 hover:border-white/25 transition-colors">
+                            🛡️ Manage Access
                         </button>
-                        <button onClick={() => router.push("/identity")} className="bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-xs text-white/50 hover:border-white/25 transition-colors">
-                            ðŸªª Pehchaan Vault
+                        <button onClick={() => router.push("/pehchaan/records")} className="bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-xs text-white/50 hover:border-white/25 transition-colors">
+                            🪪 Pehchaan Vault
                         </button>
                     </div>
                 </div>
@@ -197,7 +197,7 @@ export default function KeyChamberHub() {
                 {/* Primary CTA */}
                 {portals.length > 0 && (
                     <div className="pb-4 pt-4">
-                        <button onClick={() => router.push("/credentials/add")}
+                        <button onClick={() => router.push("/dwaar/portals/add")}
                             className="w-full bg-amber-400 text-black font-semibold py-4 rounded-xl text-sm hover:bg-amber-300 transition-colors">
                             Add New Portal
                         </button>

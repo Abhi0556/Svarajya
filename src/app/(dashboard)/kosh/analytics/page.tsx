@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -8,14 +8,14 @@ import { useRouter } from "next/navigation";
 // import { Eye } from "lucide-react"; // unused
 // import { CheckCircle2 } from "lucide-react"; // unused
 import { ArrowLeft, ChevronRight } from "lucide-react";
-import { IncomeStore, formatRupee, INCOME_TYPES } from "@/lib/stores/incomeStore";
-import { DependencyBadge } from "@/components/rajya/DependencyBadge";
-import { PageGuide } from "@/components/shared/PageGuide";
+import { IncomeStore, formatRupee, INCOME_TYPES } from "@/lib/incomeStore";
+import { DependencyBadge } from "@/components/treasury/DependencyBadge";
+import { PageGuide } from "@/components/ui/PageGuide";
 
-// Captured once at module load â€” react-hooks/purity forbids Date.now() inside components
+// Captured once at module load — react-hooks/purity forbids Date.now() inside components
 const PAGE_LOAD_NOW = Date.now();
 
-import { VideoTutorialPlaceholder } from "@/components/tutorials/TutorialCard";
+import { VideoTutorialPlaceholder } from "@/components/ui/VideoTutorialPlaceholder";
 
 export default function AnalyticsPage() {
     const router = useRouter();
@@ -28,7 +28,7 @@ export default function AnalyticsPage() {
 
     const [expandedPillar, setExpandedPillar] = useState<string | null>(null);
 
-    // Stable timestamp â€” captured at module load to satisfy react-hooks/purity
+    // Stable timestamp — captured at module load to satisfy react-hooks/purity
     const now = PAGE_LOAD_NOW;
 
     if (records.length === 0) {
@@ -56,35 +56,35 @@ export default function AnalyticsPage() {
     const pillars = [
         {
             id: "diversification",
-            icon: "ðŸ›ï¸",
+            icon: "🏛️",
             label: "Diversification",
             score: strength.diversity,
             max: strength.diversityMax,
             description: "Multiple income streams & types reduce structural risk.",
             details: [
-                `Source count: ${diversity.sourceCount} â†’ ${diversity.sourceCountScore}/10`,
-                `Income types: ${diversity.uniqueTypes} â†’ ${diversity.typeScore}/8`,
-                `Spread balance â†’ ${diversity.spreadScore}/7`,
+                `Source count: ${diversity.sourceCount} → ${diversity.sourceCountScore}/10`,
+                `Income types: ${diversity.uniqueTypes} → ${diversity.typeScore}/8`,
+                `Spread balance → ${diversity.spreadScore}/7`,
             ],
             action: diversity.uniqueTypes < 3 ? "Add another income type" : null,
         },
         {
             id: "dependency",
-            icon: "âš–ï¸",
+            icon: "⚖️",
             label: "Dependency Risk",
             score: strength.dependency,
             max: strength.dependencyMax,
-            description: "Concentration risk â€” how much one source dominates.",
+            description: "Concentration risk — how much one source dominates.",
             details: [
                 `Top source: ${dep.highSourceName || "None"}`,
                 `Contribution: ${Math.round(dep.ratio * 100)}%`,
-                dep.flag ? "âš  High dependency detected" : "âœ“ Dependency within acceptable range",
+                dep.flag ? "⚠ High dependency detected" : "✓ Dependency within acceptable range",
             ],
             action: dep.flag ? "Reduce dependency by adding sources" : null,
         },
         {
             id: "stability",
-            icon: "ðŸ›¡ï¸",
+            icon: "🛡️",
             label: "Stability",
             score: strength.stability,
             max: strength.stabilityMax,
@@ -98,11 +98,11 @@ export default function AnalyticsPage() {
         },
         {
             id: "growth",
-            icon: "ðŸ“ˆ",
+            icon: "📈",
             label: "Growth Outlook",
             score: strength.growth,
             max: strength.growthMax,
-            description: "Forward visibility â€” expected growth drives planning.",
+            description: "Forward visibility — expected growth drives planning.",
             details: [
                 `Sources with growth data: ${records.filter(r => r.expectedGrowthPct !== undefined).length}/${records.length}`,
                 ...(records.filter(r => r.expectedGrowthPct !== undefined).length > 0 ? [
@@ -113,7 +113,7 @@ export default function AnalyticsPage() {
         },
         {
             id: "governance",
-            icon: "âœ…",
+            icon: "✅",
             label: "Recency & Governance",
             score: strength.governance,
             max: strength.governanceMax,
@@ -145,8 +145,8 @@ export default function AnalyticsPage() {
                 {/* Guide */}
                 <PageGuide
                     title="How is your Income Strength Index scored?"
-                    description="Your ISI is built from 5 pillars: Diversification (how many income streams), Dependency (concentration risk), Stability (predictability), Growth (future outlook), and Governance (review discipline). Each pillar is scored individually â€” tap to see details and improve."
-                    actions={[{ emoji: "ðŸ›ï¸", label: "5 pillars" }, { emoji: "ðŸ“‹", label: "Transparent scoring" }]}
+                    description="Your ISI is built from 5 pillars: Diversification (how many income streams), Dependency (concentration risk), Stability (predictability), Growth (future outlook), and Governance (review discipline). Each pillar is scored individually — tap to see details and improve."
+                    actions={[{ emoji: "🏛️", label: "5 pillars" }, { emoji: "📋", label: "Transparent scoring" }]}
                 />
                 <div className="h-3" />
 
@@ -154,7 +154,7 @@ export default function AnalyticsPage() {
                 <VideoTutorialPlaceholder youtubeId="3Ob3stTkGLs" label="Understanding your income strength & financial analytics" />
                 <div className="h-4" />
 
-                {/* â€”â€”â€” ISI HEADLINE â€” Circular ring + label â€”â€”â€” */}
+                {/* ——— ISI HEADLINE — Circular ring + label ——— */}
                 <div className="bg-[var(--color-rajya-card)] border border-[var(--color-rajya-accent)]/20 rounded-2xl p-6 text-center mb-5">
                     <div className="relative w-28 h-28 mx-auto mb-3">
                         <svg viewBox="0 0 36 36" className="w-28 h-28 -rotate-90">
@@ -188,7 +188,7 @@ export default function AnalyticsPage() {
                     </p>
                 </div>
 
-                {/* â€”â€”â€” 5 PILLARS â€” Card-based, no graphs â€”â€”â€” */}
+                {/* ——— 5 PILLARS — Card-based, no graphs ——— */}
                 <div className="space-y-3 mb-5">
                     <p className="text-[10px] text-white/30 uppercase tracking-wider">5 Pillars of Income Strength</p>
 
@@ -215,7 +215,7 @@ export default function AnalyticsPage() {
                                             </div>
                                         </div>
 
-                                        {/* Score tier dots â€” replaces progress bar */}
+                                        {/* Score tier dots — replaces progress bar */}
                                         <div className="flex gap-1 mt-2">
                                             {Array.from({ length: p.max }).map((_, i) => (
                                                 <div
@@ -230,7 +230,7 @@ export default function AnalyticsPage() {
                                     </div>
                                 </div>
 
-                                {/* Expanded detail â€” text-based, no charts */}
+                                {/* Expanded detail — text-based, no charts */}
                                 {isExpanded && (
                                     <div className="mt-3 pt-3 border-t border-white/8 space-y-2">
                                         <p className="text-[10px] text-[var(--color-rajya-muted)]">{p.description}</p>
@@ -241,7 +241,7 @@ export default function AnalyticsPage() {
                                         ))}
                                         {p.action && (
                                             <p className="text-[10px] text-[var(--color-rajya-accent)] font-medium mt-1">
-                                                ðŸ’¡ {p.action}
+                                                💡 {p.action}
                                             </p>
                                         )}
                                     </div>
@@ -251,7 +251,7 @@ export default function AnalyticsPage() {
                     })}
                 </div>
 
-                {/* â€”â€”â€” DEPENDENCY PANEL â€”â€”â€” */}
+                {/* ——— DEPENDENCY PANEL ——— */}
                 <div className="bg-white/4 border border-white/8 rounded-xl p-4 mb-4">
                     <div className="flex items-center justify-between mb-3">
                         <p className="text-sm font-medium text-[var(--color-rajya-text)]">Dependency Ratio</p>
@@ -266,19 +266,19 @@ export default function AnalyticsPage() {
                     {dep.flag && (
                         <div className="mt-3 bg-[var(--color-rajya-danger)]/10 border border-[var(--color-rajya-danger)]/20 rounded-lg p-2.5">
                             <p className="text-[10px] text-[var(--color-rajya-danger)]">
-                                âš  High dependency: {dep.highSourceName} contributes {Math.round(dep.ratio * 100)}% of your income.
+                                ⚠ High dependency: {dep.highSourceName} contributes {Math.round(dep.ratio * 100)}% of your income.
                             </p>
                         </div>
                     )}
                 </div>
 
-                {/* â€”â€”â€” INCOME SOURCES â€” Ranked list, no charts â€”â€”â€” */}
+                {/* ——— INCOME SOURCES — Ranked list, no charts ——— */}
                 <div className="bg-white/4 border border-white/8 rounded-xl p-4 mb-4">
                     <div className="flex items-center justify-between mb-3">
                         <p className="text-sm font-medium text-[var(--color-rajya-text)]">Income Sources</p>
                         <div className="flex items-center gap-1.5 text-[10px] text-[var(--color-rajya-muted)]">
                             <span>{diversity.sourceCount} sources</span>
-                            <span>â€¢</span>
+                            <span>•</span>
                             <span>{diversity.uniqueTypes} types</span>
                         </div>
                     </div>
@@ -289,7 +289,7 @@ export default function AnalyticsPage() {
                             const isKing = i === 0;
                             return (
                                 <div key={c.id} className={`flex items-center gap-3 p-2.5 rounded-lg ${isKing ? "bg-[var(--color-rajya-accent)]/8 border border-[var(--color-rajya-accent)]/15" : "bg-white/3"}`}>
-                                    <span className="text-lg">{isKing ? "â™š" : i <= 2 ? "â™œ" : "â™Ÿ"}</span>
+                                    <span className="text-lg">{isKing ? "♚" : i <= 2 ? "♜" : "♟"}</span>
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center gap-1.5">
                                             <span className="text-xs">{typeMeta?.emoji}</span>
@@ -308,30 +308,30 @@ export default function AnalyticsPage() {
                     </div>
 
                     <p className="text-[9px] text-[var(--color-rajya-muted)] mt-3">
-                        {diversity.uniqueTypes < 3 ? "At least 3 diversified streams reduce structural risk." : "âœ“ Good type diversity."}
+                        {diversity.uniqueTypes < 3 ? "At least 3 diversified streams reduce structural risk." : "✓ Good type diversity."}
                     </p>
                 </div>
 
-                {/* â€”â€”â€” ACTIONS â€”â€”â€” */}
+                {/* ——— ACTIONS ——— */}
                 <div className="space-y-2">
                     <p className="text-[10px] text-white/30 uppercase tracking-wider">What you can do</p>
                     {strength.diversity < 15 && (
                         <button onClick={() => router.push("/kosh/add")} className="w-full bg-white/4 border border-white/8 rounded-xl py-3 px-4 text-xs text-white/60 hover:border-[var(--color-rajya-accent)]/30 transition-colors text-left">
-                            ðŸ’¡ Add another income type to improve diversification
+                            💡 Add another income type to improve diversification
                         </button>
                     )}
                     {strength.governance < 10 && (
                         <button onClick={() => router.push("/kosh/income")} className="w-full bg-white/4 border border-white/8 rounded-xl py-3 px-4 text-xs text-white/60 hover:border-[var(--color-rajya-accent)]/30 transition-colors text-left">
-                            ðŸ”„ Review and update income sources for better governance score
+                            🔄 Review and update income sources for better governance score
                         </button>
                     )}
                     {strength.growth < 8 && (
                         <button onClick={() => router.push("/kosh/income")} className="w-full bg-white/4 border border-white/8 rounded-xl py-3 px-4 text-xs text-white/60 hover:border-[var(--color-rajya-accent)]/30 transition-colors text-left">
-                            ðŸ“ˆ Add expected growth % to improve growth outlook
+                            📈 Add expected growth % to improve growth outlook
                         </button>
                     )}
                     <button onClick={() => router.push("/kosh/income")} className="w-full bg-white/4 border border-white/8 rounded-xl py-3 px-4 text-xs text-white/60 hover:border-[var(--color-rajya-accent)]/30 transition-colors text-left">
-                        ðŸ“‹ Go to Income Registry
+                        📋 Go to Income Registry
                     </button>
                 </div>
             </div>

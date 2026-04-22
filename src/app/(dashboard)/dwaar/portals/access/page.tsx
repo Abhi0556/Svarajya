@@ -1,9 +1,9 @@
-﻿"use client";
+"use client";
 
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ShieldCheck, AlertTriangle, Users } from "lucide-react";
-import { CredentialStore } from "@/lib/stores/credentialStore";
-import { IdentityStore } from "@/lib/stores/identityStore";
+import { CredentialStore } from "@/lib/credentialStore";
+import { IdentityStore } from "@/lib/identityStore";
 
 
 export default function AccessOverviewPage() {
@@ -49,7 +49,7 @@ export default function AccessOverviewPage() {
             <div className="relative z-10 flex flex-col min-h-screen">
                 {/* Header */}
                 <div className="flex items-center gap-3 pt-8 mb-6">
-                    <button onClick={() => router.push("/credentials")} className="w-9 h-9 rounded-xl bg-white/6 border border-white/10 flex items-center justify-center shrink-0">
+                    <button onClick={() => router.push("/dwaar/portals")} className="w-9 h-9 rounded-xl bg-white/6 border border-white/10 flex items-center justify-center shrink-0">
                         <ArrowLeft className="w-4 h-4 text-white/60" />
                     </button>
                     <div>
@@ -130,7 +130,7 @@ export default function AccessOverviewPage() {
                     <div className="pb-4 pt-4">
                         <button onClick={() => {
                             const first = portalsWithNoAccess[0];
-                            if (first) router.push(`/credentials/portal/${first.id}`);
+                            if (first) router.push(`/dwaar/portals/portal/${first.id}`);
                         }}
                             className="w-full bg-amber-400 text-black font-semibold py-4 rounded-xl text-sm hover:bg-amber-300 transition-colors">
                             Review Unassigned Portals

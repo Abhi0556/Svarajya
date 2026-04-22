@@ -29,7 +29,7 @@ function seedDefaults() {
             type: "action",
             title: "Complete your Identity Vault",
             message: "You haven't added any identity documents yet. Start with your PAN or Aadhaar.",
-            route: "/identity/add",
+            route: "/pehchaan/records/add",
             read: false,
             createdAt: Date.now() - 60000,
         },
@@ -96,7 +96,7 @@ export const NotificationStore = {
                 type: "action",
                 title: "Add more identity documents",
                 message: `You've added ${identityCoverage} of 6 documents. Add more to improve your identity readiness.`,
-                route: "/identity",
+                route: "/pehchaan/records",
             });
         }
 
@@ -105,7 +105,7 @@ export const NotificationStore = {
                 type: "warning",
                 title: "Strengthen your seals",
                 message: "Your identity confidence is below 60%. Upload files and verify documents to improve.",
-                route: "/identity",
+                route: "/pehchaan/records",
             });
         }
     },

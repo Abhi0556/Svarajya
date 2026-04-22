@@ -1,9 +1,9 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { AccountType, BankAccount } from "@/lib/stores/bankStore";
-import { checkDuplicateAccounts, fetchBankSummary, saveBankAccount } from "@/lib/services/bankService";
+import type { AccountType, BankAccount } from "@/lib/bankStore";
+import { checkDuplicateAccounts, fetchBankSummary, saveBankAccount } from "@/lib/bankApi";
 import { MicroLearningWrapper } from "@/components/module/MicroLearningWrapper";
 import { ArrowLeft, AlertTriangle, CheckCircle2 } from "lucide-react";
 
@@ -93,7 +93,7 @@ export default function AddBankAccount() {
 
         setSuccess(true);
         setTimeout(() => {
-            router.push("/bank");
+            router.push("/khate/accounts");
         }, 1500);
     };
 
@@ -112,7 +112,7 @@ export default function AddBankAccount() {
     return (
         <MicroLearningWrapper
             moduleTitle="Treasury Chest Builder"
-            contextText="Your wealth is not in one chest â€” it is scattered across many hidden vaults. Centralize them to see your true liquidity."
+            contextText="Your wealth is not in one chest — it is scattered across many hidden vaults. Centralize them to see your true liquidity."
             insightText="Silent liquidity sits in forgotten accounts. 15% of wealth is often lost to inactive balances."
             quizQuestion="What percentage of wealth is often lost to inactive balances?"
             quizOptions={[
@@ -206,10 +206,10 @@ export default function AddBankAccount() {
                     <div className="space-y-4">
                         <div className="space-y-1">
                             <label className="text-xs text-white/50 uppercase tracking-widest font-semibold flex justify-between">
-                                <span>Opening Balance (â‚¹)</span>
+                                <span>Opening Balance (₹)</span>
                             </label>
                             <div className="relative">
-                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40">â‚¹</span>
+                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40">₹</span>
                                 <input type="number" value={openingBalance} onChange={e => setOpeningBalance(e.target.value)} placeholder="0"
                                     className="w-full bg-white/5 border border-white/10 rounded-xl pl-9 pr-4 py-3 text-white placeholder-white/30 focus:outline-none focus:border-blue-500/50" />
                             </div>
@@ -217,10 +217,10 @@ export default function AddBankAccount() {
 
                         <div className="space-y-1">
                             <label className="text-xs text-emerald-400/80 uppercase tracking-widest font-semibold flex justify-between">
-                                <span>Current Balance (â‚¹)</span>
+                                <span>Current Balance (₹)</span>
                             </label>
                             <div className="relative">
-                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-400/50">â‚¹</span>
+                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-400/50">₹</span>
                                 <input type="number" value={currentBalance} onChange={e => setCurrentBalance(e.target.value)} placeholder="0"
                                     className="w-full bg-emerald-500/10 border border-emerald-500/30 rounded-xl pl-9 pr-4 py-3 text-emerald-100 placeholder-white/30 focus:outline-none focus:border-emerald-500/50 font-semibold text-lg" />
                             </div>

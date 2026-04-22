@@ -25,7 +25,7 @@ export function DesktopRightPanel() {
                 {[
                     { label: "Add Income", icon: Coins, route: "/kosh/add", color: "text-emerald-400 border-emerald-400/20 hover:bg-emerald-400/8" },
                     { label: "Add Expense", icon: TrendingUp, route: "/vyaya/add", color: "text-red-400 border-red-400/20 hover:bg-red-400/8" },
-                    { label: "Add Document", icon: FileText, route: "/identity/add", color: "text-amber-400 border-amber-400/20 hover:bg-amber-400/8" },
+                    { label: "Add Document", icon: FileText, route: "/pehchaan/records/add", color: "text-amber-400 border-amber-400/20 hover:bg-amber-400/8" },
                 ].map(action => {
                     const Icon = action.icon;
                     return (

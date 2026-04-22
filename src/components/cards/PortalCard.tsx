@@ -30,7 +30,7 @@ export function PortalCard({ portal, healthScore, emergencyReady, nowMs }: Porta
 
     return (
         <button
-            onClick={() => router.push(`/credentials/portal/${portal.id}`)}
+            onClick={() => router.push(`/dwaar/portals/portal/${portal.id}`)}
             className="w-full text-left bg-white/5 border border-white/10 hover:border-amber-400/30 rounded-xl p-4 transition-all"
         >
             <div className="flex items-start gap-3">
