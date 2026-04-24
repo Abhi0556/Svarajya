@@ -37,10 +37,11 @@ async function getHandler(request: NextRequest): Promise<NextResponse> {
       );
     }
 
+    const userAny: any = user;
     const response: UserResponse = {
       id: user.id,
       email: user.email,
-      phone: user.phone,
+      phone: userAny.phone ?? userAny.primary_mobile ?? userAny.primaryMobile ?? null,
       name: user.name,
       dob: user.dob?.toISOString() || null,
       gender: user.gender,
@@ -89,22 +90,43 @@ async function postHandler(request: NextRequest): Promise<NextResponse> {
     }
 
     // Update user profile
-    const user = await userService.update(authContext.userId, {
+    // Prevent updating mobile/email after verification in backend
+    const patch: any = {
       name: data.name,
-      email: data.email,
-      phone: data.phone,
       dob: data.dob ? new Date(data.dob) : undefined,
       gender: data.gender,
       maritalStatus: data.maritalStatus,
       occupationType: data.occupationType,
       employerCompany: data.employerCompany,
       language: data.language,
-    });
+    };
 
+    // Only allow email/mobile change if not verified
+    const existing = await userService.findById(authContext.userId);
+    if (!existing) {
+      return errorResponse(ErrorCodes.NOT_FOUND, 'User not found', StatusCodes.NOT_FOUND);
+    }
+
+    // Some environments may have different field naming (snake_case vs camelCase)
+    const existingAny: any = existing;
+    const isEmailVerified = existingAny.is_email_verified ?? existingAny.isEmailVerified ?? false;
+    const isMobileVerified = existingAny.is_mobile_verified ?? existingAny.isMobileVerified ?? false;
+
+    if (data.email && !isEmailVerified) {
+      patch.email = data.email;
+    }
+
+    if (data.phone && !isMobileVerified) {
+      patch.mobile = data.phone;
+    }
+
+    const user = await userService.update(authContext.userId, patch);
+
+    const userAny: any = user;
     const response: UserResponse = {
       id: user.id,
       email: user.email,
-      phone: user.phone,
+      phone: userAny.phone ?? null,
       name: user.name,
       dob: user.dob?.toISOString() || null,
       gender: user.gender,

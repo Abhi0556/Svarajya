@@ -1,13 +1,14 @@
 "use client";
 
+export const dynamic = 'force-dynamic';
+
 import { useState, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { Mail, RefreshCw, Loader2, CheckCircle, AlertCircle, Clock } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 export default function VerifyEmailPage() {
     const router = useRouter();
-    const searchParams = useSearchParams();
     const supabase = createClient();
 
     const [email, setEmail] = useState("");
@@ -17,15 +18,17 @@ export default function VerifyEmailPage() {
     const [error, setError] = useState("");
 
     useEffect(() => {
-        const emailParam = searchParams.get("email") || "";
+        // Read query params from window.location to avoid CSR prerender issues with useSearchParams
+        const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : new URLSearchParams("");
+        const emailParam = params.get("email") || "";
         setEmail(emailParam);
 
         // Check if redirected here because of an expired token
-        const errorParam = searchParams.get("error");
+        const errorParam = params.get("error");
         if (errorParam === "link_expired") {
             setIsExpiredLink(true);
         }
-    }, [searchParams]);
+    }, []);
 
     const handleResend = async () => {
         if (!email.trim()) {
