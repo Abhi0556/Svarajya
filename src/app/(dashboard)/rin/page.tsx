@@ -10,7 +10,7 @@ export default function RinModule() {
 
     const handleSave = (val: number) => {
         console.log("Rin Saved:", val);
-        router.push('/dashboard');
+        router.push('/rajya');
     };
 
     return (

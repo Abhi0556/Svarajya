@@ -19,7 +19,7 @@ export default function LeakageModule() {
     const handleSave = (selectedIds: string[]) => {
         console.log("Leakages Identified:", selectedIds);
         // Move to next module or return to map
-        router.push('/dashboard');
+        router.push('/rajya');
     };
 
     return (

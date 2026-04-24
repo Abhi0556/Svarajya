@@ -27,7 +27,7 @@ export default function RakshaModule() {
 
     const handleFinish = () => {
         console.log("Raksha Array:", selectedPolicies);
-        router.push('/dashboard');
+        router.push('/rajya');
     };
 
     const hasLifeHealth = selectedPolicies.includes('term') && selectedPolicies.includes('health');

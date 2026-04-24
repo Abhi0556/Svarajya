@@ -9,11 +9,10 @@ import { createClient } from "@/lib/supabase/client";
 
 const LAST_LOGIN_KEY = "svarajya_last_login";
 
+// Only Savings and Family Security
 const PRIORITIES = [
     { id: "save", label: "Savings", icon: "ðŸ¦", desc: "Build a safety net and grow reserves" },
     { id: "protect", label: "Family Security", icon: "ðŸ›¡ï¸", desc: "Insurance, nominees, and legacy" },
-    { id: "grow", label: "Growth", icon: "ðŸ“ˆ", desc: "Investments and wealth building" },
-    { id: "organise", label: "Organisation", icon: "ðŸ—‚ï¸", desc: "Documents, clarity, and control" },
 ];
 
 function FirstWinContent() {
@@ -21,7 +20,7 @@ function FirstWinContent() {
     const searchParams = useSearchParams();
     const isReturning = searchParams.get("returning") === "true";
     const [priority, setPriority] = useState("");
-    // Name starts as "Ruler" fallback, then gets replaced with real name from DB
+    const [profileCompletion, setProfileCompletion] = useState(0);
     const [firstName, setFirstName] = useState("Ruler");
     const lastLoginDisplay = (() => {
         if (typeof window === "undefined") return null;
@@ -32,36 +31,53 @@ function FirstWinContent() {
     })();
 
     useEffect(() => {
-        // Fetch name directly from DB â€” in-memory OnboardingStore is empty on fresh page load
+        // Fetch name and profile completion from DB
         fetch("/api/profile")
             .then(r => (r.ok ? r.json() : null))
             .then(profile => {
                 if (profile?.fullName) {
                     setFirstName(profile.fullName.split(" ")[0]);
                 } else {
-                    // Fallback: check in-memory store (works during same session)
                     const stored = OnboardingStore.get().fullName;
                     if (stored) setFirstName(stored.split(" ")[0]);
                 }
+                
+                // Calculate profile completion percentage
+                let completed = 0;
+                let total = 0;
+                
+                if (profile?.fullName) completed++;
+                total++;
+                
+                if (profile?.dob) completed++;
+                total++;
+                
+                if (profile?.mobile) completed++;
+                total++;
+                
+                if (profile?.familyMembers && profile.familyMembers.length > 0) completed++;
+                total++;
+                
+                if (profile?.education) completed++;
+                total++;
+                
+                setProfileCompletion(total > 0 ? Math.round((completed / total) * 100) : 0);
             })
             .catch(() => {
                 const stored = OnboardingStore.get().fullName;
                 if (stored) setFirstName(stored.split(" ")[0]);
             });
-     
     }, []);
 
-    const handleFinish = async () => {
+    const handleGoToDashboard = async () => {
         if (priority) OnboardingStore.set({ priority });
         localStorage.setItem(LAST_LOGIN_KEY, new Date().toISOString());
-        // Mark onboarding as completed in Supabase user_metadata (no Prisma DB change)
         try {
             const supabase = createClient();
             await supabase.auth.updateUser({ data: { onboarding_completed: true } });
         } catch {/* non-critical */}
         router.push("/rajya");
     };
-
 
     // --- RETURNING USER VIEW ---
     if (isReturning) {
@@ -100,14 +116,7 @@ function FirstWinContent() {
                         initial={{ opacity: 0, y: 16 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.6 }}
-                        onClick={async () => {
-                            localStorage.setItem(LAST_LOGIN_KEY, new Date().toISOString());
-                            try {
-                                const supabase = createClient();
-                                await supabase.auth.updateUser({ data: { onboarding_completed: true } });
-                            } catch {/* non-critical */}
-                            router.push("/rajya");
-                        }}
+                        onClick={handleGoToDashboard}
                         className="w-full max-w-xs bg-amber-400 text-black font-bold py-4 rounded-xl text-sm flex items-center justify-center gap-2 hover:bg-amber-300 transition-colors"
                     >
                         Enter Rajya
@@ -135,7 +144,7 @@ function FirstWinContent() {
                         <div className="w-24 h-24 rounded-full bg-amber-400/15 border-2 border-amber-400 flex items-center justify-center shadow-[0_0_40px_rgba(251,191,36,0.3)]">
                             <Award className="w-12 h-12 text-amber-400" />
                         </div>
-                        <div className="absolute -top-1 -right-1 w-6 h-6 bg-emerald-500 rounded-full flex items-center justify-center text-xs">âœ“</div>
+                        <div className="absolute -top-1 -right-1 w-6 h-6 bg-emerald-500 rounded-full flex items-center justify-center text-xs">✓</div>
                     </motion.div>
 
                     <motion.div
@@ -148,7 +157,7 @@ function FirstWinContent() {
                         <h1 className="text-2xl font-semibold text-white">Rajya Foundation Complete</h1>
                     </motion.div>
 
-                    {/* Strength bar */}
+                    {/* Progress Bar based on profile completion */}
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
@@ -160,18 +169,18 @@ function FirstWinContent() {
                             <motion.div
                                 className="h-full bg-amber-400 rounded-full"
                                 initial={{ width: 0 }}
-                                animate={{ width: "100%" }}
+                                animate={{ width: `${profileCompletion}%` }}
                                 transition={{ delay: 0.8, duration: 1.2, ease: "easeOut" }}
                             />
                         </div>
-                        <p className="text-amber-400 font-bold text-lg">100%</p>
+                        <p className="text-amber-400 font-bold text-lg">{profileCompletion}%</p>
                         <p className="text-white/40 text-xs mt-1">
                             You have established the base of your financial kingdom.
                         </p>
                     </motion.div>
                 </div>
 
-                {/* Priority selector */}
+                {/* Priority selector - only Savings and Family Security */}
                 <motion.div
                     initial={{ opacity: 0, y: 16 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -185,16 +194,7 @@ function FirstWinContent() {
                         {PRIORITIES.map(p => (
                             <button
                                 key={p.id}
-                                onClick={async () => {
-                                    setPriority(p.id);
-                                    OnboardingStore.set({ priority: p.id });
-                                    localStorage.setItem(LAST_LOGIN_KEY, new Date().toISOString());
-                                    try {
-                                        const supabase = createClient();
-                                        await supabase.auth.updateUser({ data: { onboarding_completed: true } });
-                                    } catch {/* non-critical */}
-                                    setTimeout(() => router.push("/rajya"), 300);
-                                }}
+                                onClick={() => setPriority(p.id)}
                                 className={`p-3 rounded-xl border text-left transition-all hover:-translate-y-1 ${priority === p.id
                                     ? "bg-amber-400/15 border-amber-400"
                                     : "bg-white/5 border-white/10 hover:border-amber-400/30"
@@ -210,9 +210,24 @@ function FirstWinContent() {
                     </div>
                 </motion.div>
 
+                {/* Go to Dashboard Button */}
+                <motion.div
+                    initial={{ opacity: 0, y: 16 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 1.5 }}
+                    className="pb-6"
+                >
+                    <button
+                        onClick={handleGoToDashboard}
+                        className="w-full bg-amber-400 text-black font-bold py-4 rounded-xl text-sm flex items-center justify-center gap-2 hover:bg-amber-300 transition-colors"
+                    >
+                        Go to Dashboard
+                    </button>
+                </motion.div>
+
                 {/* Welcome hint */}
                 {firstName && (
-                    <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.5 }} className="text-center text-white/35 text-xs pb-6">
+                    <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.8 }} className="text-center text-white/35 text-xs pb-6">
                         Welcome to Sva-Rajya, {firstName}. Tap a priority above to enter your Rajya.
                     </motion.p>
                 )}

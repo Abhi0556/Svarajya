@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Users, GraduationCap, Camera, CheckCircle2 } from "lucide-react";
-import { FileUploader } from "@/components/vault/FileUploader";
+import { ArrowLeft, Users, GraduationCap, Camera, CheckCircle2, Trash2, Edit2 } from "lucide-react";
 import { OnboardingStore } from "@/lib/onboardingStore";
 import { PageGuide } from "@/components/ui/PageGuide";
 import { VideoTutorialPlaceholder } from "@/components/ui/VideoTutorialPlaceholder";
+import { createClient } from "@/lib/supabase/client";
 
 const STEPS = [
     { id: "family", icon: <Users className="w-5 h-5" />, label: "Family Members", desc: "Who depends on you financially?", route: "/foundation/family" },
@@ -18,6 +18,113 @@ export default function FoundationHub() {
     const router = useRouter();
     const data = OnboardingStore.get();
     const [photoUploaded, setPhotoUploaded] = useState(false);
+    const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+    const [uploadError, setUploadError] = useState<string | null>(null);
+    const [uploading, setUploading] = useState(false);
+    const supabase = createClient();
+
+    // Fetch existing profile photo on load
+    useEffect(() => {
+        const fetchProfilePhoto = async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user?.user_metadata?.profile_photo) {
+                setPhotoUrl(user.user_metadata.profile_photo);
+                setPhotoUploaded(true);
+            }
+        };
+        fetchProfilePhoto();
+    }, []);
+
+    const handlePhotoUpload = async (file: File) => {
+        // Check file size (max 2MB)
+        if (file.size > 2 * 1024 * 1024) {
+            setUploadError("File size exceeds 2MB. Please choose a smaller image.");
+            return false;
+        }
+
+        // Check file type
+        if (!file.type.startsWith("image/")) {
+            setUploadError("Please upload an image file (JPEG, PNG, etc.)");
+            return false;
+        }
+
+        setUploading(true);
+        setUploadError(null);
+
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) throw new Error("User not found");
+
+            // Generate unique file name
+            const fileExt = file.name.split(".").pop();
+            const fileName = `${user.id}-${Date.now()}.${fileExt}`;
+            const filePath = `${fileName}`;
+
+            // Upload to Supabase Storage bucket
+            const { error: uploadError } = await supabase.storage
+                .from("profile-photos")
+                .upload(filePath, file);
+
+            if (uploadError) throw uploadError;
+
+            // Get public URL
+            const { data: urlData } = supabase.storage
+                .from("profile-photos")
+                .getPublicUrl(filePath);
+
+            const publicUrl = urlData.publicUrl;
+
+            // Save URL to user_metadata
+            const { error: updateError } = await supabase.auth.updateUser({
+                data: { profile_photo: publicUrl }
+            });
+
+            if (updateError) throw updateError;
+
+            setPhotoUrl(publicUrl);
+            setPhotoUploaded(true);
+            setUploadError(null);
+            return true;
+        } catch (err) {
+            console.error("Upload error:", err);
+            setUploadError("Failed to upload photo. Please try again.");
+            return false;
+        } finally {
+            setUploading(false);
+        }
+    };
+
+    const handleRemovePhoto = async () => {
+        setUploading(true);
+        try {
+            if (photoUrl) {
+                // Extract file name from URL
+                const fileName = photoUrl.split("/").pop();
+                if (fileName) {
+                    // Delete from storage
+                    await supabase.storage
+                        .from("profile-photos")
+                        .remove([fileName]);
+                }
+            }
+
+            // Remove from user_metadata
+            const { error: updateError } = await supabase.auth.updateUser({
+                data: { profile_photo: null }
+            });
+
+            if (updateError) throw updateError;
+
+            setPhotoUrl(null);
+            setPhotoUploaded(false);
+            setUploadError(null);
+        } catch (err) {
+            console.error("Remove error:", err);
+            setUploadError("Failed to remove photo. Please try again.");
+        } finally {
+            setUploading(false);
+        }
+    };
 
     return (
         <div className="flex flex-col min-h-screen p-6 pb-24 relative">
@@ -26,13 +133,9 @@ export default function FoundationHub() {
             <div className="relative z-10 flex flex-col min-h-screen">
                 {/* Header */}
                 <div className="flex items-center gap-3 pt-8 mb-8">
-                    <button onClick={() => router.back()} className="w-9 h-9 rounded-xl bg-white/6 border border-white/10 flex items-center justify-center">
+                    <button onClick={() => router.push("/rajya")} className="w-9 h-9 rounded-xl bg-white/6 border border-white/10 flex items-center justify-center">
                         <ArrowLeft className="w-4 h-4 text-white/60" />
                     </button>
-                    <div>
-                        <h1 className="text-lg font-semibold text-white">Your Profile</h1>
-                        <p className="text-xs text-white/35 mt-0.5">A few more details to complete your setup</p>
-                    </div>
 
                     {/* Guide Section */}
                     <PageGuide
@@ -47,30 +150,58 @@ export default function FoundationHub() {
                 <div className="bg-white/5 border border-white/10 rounded-2xl p-4 mb-6">
                     <div className="flex items-center gap-4">
                         {/* Profile photo upload */}
-                        <div className="relative shrink-0">
-                            {photoUploaded ? (
-                                <div className="w-14 h-14 rounded-full bg-amber-400/20 border-2 border-amber-400 flex items-center justify-center">
-                                    <CheckCircle2 className="w-6 h-6 text-amber-400" />
+                        <div className="relative shrink-0 group">
+                            {photoUploaded && photoUrl ? (
+                                <div className="relative">
+                                    <img 
+                                        src={photoUrl} 
+                                        alt="Profile"
+                                        className="w-14 h-14 rounded-full object-cover border-2 border-amber-400"
+                                    />
+                                    <div className="absolute inset-0 bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1">
+                                        <button
+                                            onClick={() => document.getElementById("photo-upload")?.click()}
+                                            className="p-1 hover:bg-white/20 rounded-full"
+                                            title="Edit"
+                                        >
+                                            <Edit2 className="w-3 h-3 text-white" />
+                                        </button>
+                                        <button
+                                            onClick={handleRemovePhoto}
+                                            className="p-1 hover:bg-white/20 rounded-full"
+                                            title="Remove"
+                                            disabled={uploading}
+                                        >
+                                            <Trash2 className="w-3 h-3 text-red-400" />
+                                        </button>
+                                    </div>
                                 </div>
                             ) : (
-                                <div className="w-14 h-14 rounded-full bg-white/8 border-2 border-dashed border-white/20 flex flex-col items-center justify-center gap-0.5 overflow-hidden cursor-pointer">
+                                <div 
+                                    onClick={() => document.getElementById("photo-upload")?.click()}
+                                    className="w-14 h-14 rounded-full bg-white/8 border-2 border-dashed border-white/20 flex flex-col items-center justify-center gap-0.5 overflow-hidden cursor-pointer hover:border-amber-400/50 transition-colors"
+                                >
                                     <Camera className="w-5 h-5 text-white/30" />
                                     <span className="text-[9px] text-white/30">Photo</span>
                                 </div>
                             )}
-                            {/* Invisible full-cover upload trigger */}
-                            <div className="absolute inset-0 opacity-0">
-                                <FileUploader
-                                    folder="profile"
-                                    accept="image/*"
-                                    label=""
-                                    compact
-                                    onUploaded={() => setPhotoUploaded(true)}
-                                />
-                            </div>
+                            {/* Hidden file input */}
+                            <input
+                                id="photo-upload"
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    if (file) handlePhotoUpload(file);
+                                }}
+                            />
                         </div>
 
-                        <div className="flex-1 min-w-0">
+                        <div 
+                            className="flex-1 min-w-0 cursor-pointer"
+                            onClick={() => router.push("/onboarding/name")}
+                        >
                             <p className="font-semibold text-white truncate">{data.fullName || "Your Name"}</p>
                             <p className="text-xs text-white/40 mt-0.5">
                                 {data.occupationType || "Occupation"} · {data.lifePhase || "Nirmaan"} phase
@@ -86,8 +217,19 @@ export default function FoundationHub() {
                             Edit
                         </button>
                     </div>
-                    {!photoUploaded && (
-                        <p className="text-xs text-white/25 mt-3 text-center">Tap the circle above to add your photo</p>
+                    
+                    {/* Upload error message */}
+                    {uploadError && (
+                        <p className="text-red-400 text-xs mt-3 text-center">{uploadError}</p>
+                    )}
+                    
+                    {/* Uploading indicator */}
+                    {uploading && (
+                        <p className="text-amber-400 text-xs mt-3 text-center">Uploading...</p>
+                    )}
+                    
+                    {!photoUploaded && !uploadError && (
+                        <p className="text-xs text-white/25 mt-3 text-center">Tap the circle above to add your photo (Max 2MB)</p>
                     )}
                 </div>
 
@@ -123,7 +265,7 @@ export default function FoundationHub() {
 
                 <div className="pb-4 pt-6">
                     <button
-                        onClick={() => router.push("/dashboard")}
+                        onClick={() => router.push("/rajya")}
                         className="w-full bg-amber-400 text-black font-semibold py-4 rounded-xl text-sm hover:bg-amber-300 transition-colors"
                     >
                         Go to Dashboard

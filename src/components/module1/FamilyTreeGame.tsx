@@ -27,6 +27,8 @@ const ROLE_OPTIONS = ["Viewer", "Executor", "Emergency-only", "None"];
 export function FamilyTreeGame({ members, onAddMember, onRemoveMember }: FamilyTreeProps) {
     const [isAdding, setIsAdding] = useState(false);
     const [errorMsg, setErrorMsg] = useState("");
+    const [mobileError, setMobileError] = useState("");
+    const [emailError, setEmailError] = useState("");
 
     // Form State
     const [formData, setFormData] = useState({
@@ -40,10 +42,42 @@ export function FamilyTreeGame({ members, onAddMember, onRemoveMember }: FamilyT
         accessRole: "None" as FamilyMember["accessRole"]
     });
 
+    const handleMobileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        // Remove any non-digit characters and limit to 10 digits
+        const value = e.target.value.replace(/\D/g, "").slice(0, 10);
+        setFormData({ ...formData, phone: value });
+        setMobileError("");
+    };
+
+    const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value;
+        setFormData({ ...formData, email: value });
+        setEmailError("");
+    };
+
+    const handleEmailBlur = () => {
+        if (formData.email && !formData.email.endsWith("@gmail.com")) {
+            setEmailError("Only @gmail.com email addresses are allowed");
+        }
+    };
+
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        
         if (!formData.name || !formData.dob) {
             setErrorMsg("Name and Janma Tithi (DOB) are required to forge a link.");
+            return;
+        }
+
+        // Mobile validation if provided
+        if (formData.phone && formData.phone.length !== 10) {
+            setMobileError("Mobile number must be exactly 10 digits");
+            return;
+        }
+
+        // Email validation if provided
+        if (formData.email && !formData.email.endsWith("@gmail.com")) {
+            setEmailError("Only @gmail.com email addresses are allowed");
             return;
         }
 
@@ -86,6 +120,8 @@ export function FamilyTreeGame({ members, onAddMember, onRemoveMember }: FamilyT
         setFormData({ name: "", relationship: "Spouse", dob: "", phone: "", email: "", dependent: false, nomineeEligible: true, accessRole: "None" });
         setIsAdding(false);
         setErrorMsg("");
+        setMobileError("");
+        setEmailError("");
     };
 
     return (
@@ -200,12 +236,34 @@ export function FamilyTreeGame({ members, onAddMember, onRemoveMember }: FamilyT
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">
-                                <input type="tel" placeholder="Mobile No. (Optional)" value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} className="w-full bg-black/50 border border-white/20 rounded-xl px-4 py-3 text-sm text-[var(--color-rajya-text)] focus:outline-none focus:border-[var(--color-rajya-accent)]" />
-                                <input type="email" placeholder="Email ID (Optional)" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} className="w-full bg-black/50 border border-white/20 rounded-xl px-4 py-3 text-sm text-[var(--color-rajya-text)] focus:outline-none focus:border-[var(--color-rajya-accent)]" />
+                                <div className="space-y-1">
+                                    <input 
+                                        type="tel" 
+                                        placeholder="Mobile No. (10 digits)" 
+                                        value={formData.phone} 
+                                        onChange={handleMobileChange}
+                                        maxLength={10}
+                                        className={`w-full bg-black/50 border rounded-xl px-4 py-3 text-sm text-[var(--color-rajya-text)] focus:outline-none focus:border-[var(--color-rajya-accent)] ${mobileError ? 'border-red-500' : 'border-white/20'}`}
+                                    />
+                                    {mobileError && <p className="text-red-400 text-xs">{mobileError}</p>}
+                                </div>
+                                <div className="space-y-1">
+                                    <input 
+                                        type="email" 
+                                        placeholder="Email ID (@gmail.com)" 
+                                        value={formData.email} 
+                                        onChange={handleEmailChange}
+                                        onBlur={handleEmailBlur}
+                                        className={`w-full bg-black/50 border rounded-xl px-4 py-3 text-sm text-[var(--color-rajya-text)] focus:outline-none focus:border-[var(--color-rajya-accent)] ${emailError ? 'border-red-500' : 'border-white/20'}`}
+                                    />
+                                    {emailError && <p className="text-red-400 text-xs">{emailError}</p>}
+                                </div>
                             </div>
 
                             <div className="flex items-center justify-between bg-black/30 p-4 rounded-xl border border-white/5">
-                                <span className="text-sm text-[var(--color-rajya-muted)]">Dependent financially?</span>
+                                <span className={`text-sm transition-colors ${formData.dependent ? 'text-white' : 'text-white/40'}`}>
+                                    Dependent financially?
+                                </span>
                                 <button type="button" onClick={() => setFormData({ ...formData, dependent: !formData.dependent })} className={`w-12 h-6 rounded-full transition-colors relative ${formData.dependent ? 'bg-[var(--color-rajya-danger)]' : 'bg-white/20'}`}>
                                     <motion.div animate={{ x: formData.dependent ? 24 : 2 }} className="w-5 h-5 bg-white rounded-full absolute top-0.5" />
                                 </button>

@@ -19,7 +19,7 @@ export default function MitraModule() {
 
     const handleFinish = () => {
         console.log("Mitra Locked:", { hasWill });
-        router.push('/dashboard');
+        router.push('/rajya');
     };
 
     return (

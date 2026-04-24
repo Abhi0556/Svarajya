@@ -3,10 +3,8 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
-import { ChevronDown, ChevronUp, ArrowLeft } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { OnboardingStore, deriveLifePhase } from "@/lib/stores/onboardingStore";
-
-const LIFE_PHASES = ["Yuva", "Nirmaan", "Sthirta", "Parampara"];
 
 function ProgressBar({ step }: { step: number }) {
     return (
@@ -22,7 +20,6 @@ export default function DOBStep() {
     const router = useRouter();
     const [dob, setDob] = useState(() => OnboardingStore.get().dob || "");
     const [lifePhase, setLifePhase] = useState(() => OnboardingStore.get().lifePhase || "");
-    const [showPhaseEdit, setShowPhaseEdit] = useState(false);
     const [error, setError] = useState("");
     const [placed, setPlaced] = useState(false);
 
@@ -99,27 +96,10 @@ export default function DOBStep() {
                         </div>
 
                         {lifePhase && (
-                            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-amber-400/8 border border-amber-400/20 rounded-xl p-4">
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                        <p className="text-xs text-white/40 uppercase tracking-wider">Your current phase</p>
-                                        <p className="text-amber-400 font-semibold text-lg mt-0.5">{lifePhase}</p>
-                                    </div>
-                                    <button onClick={() => setShowPhaseEdit(!showPhaseEdit)} className="text-white/30 hover:text-white/60">
-                                        {showPhaseEdit ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                                    </button>
-                                </div>
-                                {showPhaseEdit && (
-                                    <div className="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-white/10">
-                                        {LIFE_PHASES.map(p => (
-                                            <button key={p} onClick={() => { setLifePhase(p); setShowPhaseEdit(false); }}
-                                                className={`py-2 rounded-lg text-xs border transition-colors ${lifePhase === p ? "bg-amber-400/20 border-amber-400 text-amber-400" : "bg-white/5 border-white/10 text-white/50"}`}>
-                                                {p}
-                                            </button>
-                                        ))}
-                                    </div>
-                                )}
-                            </motion.div>
+                            <div className="bg-amber-400/8 border border-amber-400/20 rounded-xl p-4">
+                                <p className="text-xs text-white/40 uppercase tracking-wider">Your current phase</p>
+                                <p className="text-amber-400 font-semibold text-lg mt-0.5">{lifePhase}</p>
+                            </div>
                         )}
                     </div>
                 </div>

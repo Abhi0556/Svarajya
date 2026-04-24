@@ -39,7 +39,7 @@ export default function VyayaHub() {
                         <h1 className="text-xl font-semibold text-white">Vyaya <span className="text-white/40 text-sm font-normal">(Expenses)</span></h1>
                         <p className="text-xs text-white/50 mt-0.5">Track, control, and stop silent drains.</p>
                     </div>
-                    <button onClick={() => router.push("/dashboard")} className="text-xs text-white/40">â† Dashboard</button>
+                    <button onClick={() => router.push("/rajya")} className="text-xs text-white/40">â† Dashboard</button>
                 </div>
 
                 {/* Guide */}

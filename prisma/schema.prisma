@@ -843,6 +843,7 @@ model User {
   profileType       ProfileType
   status            UserStatus  @default(ACTIVE)
   language          String      @default("en")
+  profilePhoto      String?   @map("profile_photo")
   createdAt         DateTime    @default(now())
   updatedAt         DateTime    @updatedAt
   lastActiveAt      DateTime?

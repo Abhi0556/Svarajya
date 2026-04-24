@@ -10,7 +10,7 @@ export default function SurakshaPage() {
       <div className="bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-white/40 text-sm mt-6">
         🚧 Coming Soon
       </div>
-      <button onClick={() => router.back()} className="mt-6 text-amber-400/60 text-sm hover:text-amber-400"> Go back</button>
+      <button onClick={() => router.push("/rajya")} className="mt-6 text-amber-400/60 text-sm hover:text-amber-400"> Go back</button>
     </div>
   );
 }

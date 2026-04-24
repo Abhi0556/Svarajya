@@ -47,7 +47,7 @@ export default function NotificationsPage() {
                 {/* Header */}
                 <div className="flex items-center justify-between pt-8 mb-6">
                     <div className="flex items-center gap-3">
-                        <button onClick={() => router.back()} className="w-9 h-9 rounded-xl bg-white/6 border border-white/10 flex items-center justify-center shrink-0">
+                        <button onClick={() => router.push("/rajya")} className="w-9 h-9 rounded-xl bg-white/6 border border-white/10 flex items-center justify-center shrink-0">
                             <ArrowLeft className="w-4 h-4 text-white/60" />
                         </button>
                         <div>

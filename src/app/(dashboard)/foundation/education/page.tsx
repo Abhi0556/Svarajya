@@ -85,7 +85,7 @@ export default function EducationPage() {
 
     const handleFinish = () => {
         console.log("Education saved:", entries, "Certificates:", uploadedCerts);
-        router.push("/dashboard");
+        router.push("/rajya");
     };
 
     const anyLoan = entries.some(e => e.hasLoan);

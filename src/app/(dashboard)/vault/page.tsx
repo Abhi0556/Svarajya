@@ -70,7 +70,7 @@ export default function VaultPage() {
             <div className="relative z-10 flex flex-col min-h-screen p-6">
                 {/* Header */}
                 <div className="flex items-center gap-3 pt-8 mb-6">
-                    <button onClick={() => activeFolder ? setActiveFolder(null) : router.back()} className="w-9 h-9 rounded-xl bg-white/6 border border-white/10 flex items-center justify-center">
+                    <button onClick={() => activeFolder ? setActiveFolder(null) : router.push("/rajya")} className="w-9 h-9 rounded-xl bg-white/6 border border-white/10 flex items-center justify-center">
                         <ArrowLeft className="w-4 h-4 text-white/60" />
                     </button>
                     <div>
