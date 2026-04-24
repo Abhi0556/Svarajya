@@ -6,7 +6,7 @@ export interface CreateUserInput {
   id?: string;
   email?: string;
   name?: string;
-  phone?: string;
+  mobile?: string;
   profileType: string;
   status?: string;
   language?: string;
@@ -15,7 +15,7 @@ export interface CreateUserInput {
 export interface UpdateUserInput {
   name?: string;
   email?: string;
-  phone?: string;
+  mobile?: string;
   dob?: Date;
   gender?: string;
   maritalStatus?: string;
@@ -49,16 +49,26 @@ class UserService extends BaseService<User, CreateUserInput, UpdateUserInput> {
   }
 
   /**
-   * Find user by phone
+   * Find user by mobile
    */
-  async findByPhone(phone: string): Promise<User | null> {
+  async findByMobile(mobile: string): Promise<User | null> {
     try {
       return await prisma.user.findUnique({
-        where: { phone },
+        where: { phone: mobile },
       });
     } catch (error) {
-      console.error('[UserService] Error finding by phone:', error);
-      throw error;
+      // If the DB schema hasn't yet been migrated, the `mobile` column may not exist.
+      // Fall back to a raw SQL lookup across possible column names (mobile, phone, primary_mobile).
+      try {
+        const rows: any[] = await prisma.$queryRawUnsafe(
+          `SELECT * FROM users WHERE mobile = $1 OR phone = $1 OR primary_mobile = $1 OR primarymobile = $1 LIMIT 1`,
+          mobile
+        );
+        return rows?.[0] ?? null;
+      } catch (rawErr) {
+        console.error('[UserService] Error finding by mobile (fallback):', rawErr);
+        throw error;
+      }
     }
   }
 
