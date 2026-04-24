@@ -66,9 +66,13 @@ export default function ResetPasswordPage() {
             const { error: updateError } = await supabase.auth.updateUser({
                 password: password
             });
-            
+
             if (updateError) throw updateError;
-            
+
+            // Ensure the user is signed out so they land on the login page
+            const { error: signOutError } = await supabase.auth.signOut();
+            if (signOutError) console.warn("Sign out after password update failed:", signOutError);
+
             setSuccess(true);
             setCountdown(5);
         } catch (err: unknown) {
