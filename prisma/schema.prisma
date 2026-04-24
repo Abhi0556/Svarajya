@@ -54,6 +54,8 @@ model AdminUser {
   supportTickets    SupportTicket[]     @relation("TicketAssignedTo")
   broadcasts        Broadcast[]
   reports           ScheduledReport[]
+  iksAssets       IKSAsset[]   @relation("IKSAssetCreatedBy")
+  parameterHistory  CalculationParameterHistory[]
 
   @@index([email])
   @@index([role])
@@ -481,18 +483,42 @@ model QuizAnswer {
 
 model CalculationParameter {
   id              String    @id @default(uuid())
-  key             String    @unique // "emi_burden_threshold", "raksha_weight", etc.
+  key             String    @unique
   value           Float
   defaultValue    Float
   description     String?
-  category        String? // "threshold", "weight"
+  category        String?
+  unit            String?   // Add: "percentage", "multiplier", "days", "months", "rupees"
+  minValue        Float?    // Add: validation
+  maxValue        Float?    // Add: validation
   version         Int       @default(1)
   updatedAt       DateTime  @updatedAt
   createdAt       DateTime  @default(now())
 
+  history         CalculationParameterHistory[]  // Add relation
+
   @@index([key])
   @@index([category])
   @@map("calculation_parameters")
+}
+
+model CalculationParameterHistory {
+  id          String   @id @default(uuid())
+  parameterId String
+  parameterKey String  // Denormalized for easy querying
+  oldValue    Float
+  newValue    Float
+  changedBy   String
+  reason      String?
+  changedAt   DateTime @default(now())
+
+  parameter   CalculationParameter @relation(fields: [parameterId], references: [id], onDelete: Cascade)
+  admin       AdminUser            @relation(fields: [changedBy], references: [id])
+
+  @@index([parameterId])
+  @@index([parameterKey])
+  @@index([changedAt])
+  @@map("calculation_parameter_history")
 }
 
 // ----------------------------------------------------------------------------
@@ -505,17 +531,22 @@ model NotificationTemplate {
   channel           NotifChannel
   language          String      @default("en")
   subject           String?
-  bodyTemplate      String // Can include variables like {user_name}, {due_date}
-  triggerEvent      String // "insurance_renewal_due", "module_completed", etc.
+  bodyTemplate      String
+  triggerEvent      String
   personaScope      Json?
   visibilityStatus  ContentStatus @default(DRAFT)
+  createdBy         String      // Add
+  updatedBy         String?     // Add
   createdAt         DateTime    @default(now())
   updatedAt         DateTime    @updatedAt
 
+  creator           AdminUser   @relation("TemplateCreatedBy", fields: [createdBy], references: [id])
+  updater           AdminUser?  @relation("TemplateUpdatedBy", fields: [updatedBy], references: [id])
   notifications     Notification[]
 
   @@index([name])
   @@index([channel])
+  @@index([triggerEvent])
   @@map("notification_templates")
 }
 
@@ -578,6 +609,8 @@ model Broadcast {
   createdAt       DateTime    @default(now())
 
   admin           AdminUser   @relation(fields: [createdBy], references: [id])
+  templatesCreated  NotificationTemplate[] @relation("TemplateCreatedBy")
+  templatesUpdated  NotificationTemplate[] @relation("TemplateUpdatedBy")
 
   @@index([status])
   @@index([scheduledFor])
@@ -639,20 +672,27 @@ model UserCohort {
 model IKSAsset {
   id              String      @id @default(uuid())
   assetType       AssetType
+  name            String      // Add: "raksha-zone-icon", "badge-sentinel"
   fileUrl         String
   fileName        String
-  moduleScope     String? // Module code or null for global
+  fileSize        Int?        // Add: for upload validation
+  mimeType        String?     // Add: "image/svg+xml", "application/json"
+  metadata        Json?       // Add: {dimensions, colors, tags}
+  moduleScope     String?
   language        String?
   version         Int         @default(1)
   visibilityFlag  Boolean     @default(true)
+  createdBy       String      // Add: track who uploaded
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
 
+  creator         AdminUser   @relation("IKSAssetCreatedBy", fields: [createdBy], references: [id])
+
   @@index([assetType])
   @@index([moduleScope])
+  @@index([name])          // Add index
   @@map("iks_assets")
 }
-
 enum AssetType {
   ICON
   STORY_CARD
