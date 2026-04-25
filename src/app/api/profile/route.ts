@@ -80,13 +80,28 @@ async function postHandler(request: NextRequest): Promise<NextResponse> {
   try {
     const data: any = await request.json();
 
-    // Validate required fields
-    if (!data.name && typeof data.isFirstLogin !== 'boolean') {
+    // Log incoming request body for debugging
+    console.log('[Profile POST] Received data:', JSON.stringify(data, null, 2));
+
+    // Validate required fields - allow updates when any valid field is present
+    const hasValidFields = data.name !== undefined ||
+                          typeof data.isFirstLogin === 'boolean' ||
+                          data.dob !== undefined ||
+                          data.gender !== undefined ||
+                          data.maritalStatus !== undefined ||
+                          data.occupationType !== undefined ||
+                          data.employerCompany !== undefined ||
+                          data.language !== undefined ||
+                          data.phone !== undefined ||
+                          data.email !== undefined ||
+                          (data.familyMembers !== undefined && Array.isArray(data.familyMembers));
+
+    if (!hasValidFields) {
       return errorResponse(
         ErrorCodes.VALIDATION_ERROR,
-        'Name is required',
+        'At least one valid field must be provided for update',
         StatusCodes.UNPROCESSABLE_ENTITY,
-        { field: 'name' }
+        { field: 'general' }
       );
     }
 
@@ -99,6 +114,7 @@ async function postHandler(request: NextRequest): Promise<NextResponse> {
       occupationType: data.occupationType,
       employerCompany: data.employerCompany,
       language: data.language,
+      familyMembers: data.familyMembers,
     };
     if (data.name !== undefined) patch.name = data.name;
     if (typeof data.isFirstLogin === 'boolean') patch.is_first_login = data.isFirstLogin;
@@ -132,6 +148,19 @@ async function postHandler(request: NextRequest): Promise<NextResponse> {
       if (data.language) {
         createData.language = data.language;
       }
+      if (data.familyMembers && Array.isArray(data.familyMembers)) {
+        // Handle family members as nested create for new users
+        createData.familyMembers = {
+          create: data.familyMembers.map((member: any) => ({
+            name: member.name,
+            relation: member.relationship || member.relation,
+            dob: member.dob ? new Date(member.dob) : null,
+            isDependent: member.dependent ?? member.isDependent ?? false,
+            nomineeEligible: member.nomineeEligible ?? false,
+            accessLevel: member.accessRole || member.accessLevel || 'read',
+          })),
+        };
+      }
       if (typeof data.isFirstLogin === 'boolean') {
         createData.is_first_login = data.isFirstLogin;
       }
@@ -148,6 +177,21 @@ async function postHandler(request: NextRequest): Promise<NextResponse> {
 
       if (data.phone && !isMobileVerified) {
         patch.phone = data.phone;
+      }
+
+      // Handle family members update - replace all existing family members
+      if (data.familyMembers && Array.isArray(data.familyMembers)) {
+        patch.familyMembers = {
+          deleteMany: {}, // Delete all existing family members
+          create: data.familyMembers.map((member: any) => ({
+            name: member.name,
+            relation: member.relationship || member.relation,
+            dob: member.dob ? new Date(member.dob) : null,
+            isDependent: member.dependent ?? member.isDependent ?? false,
+            nomineeEligible: member.nomineeEligible ?? false,
+            accessLevel: member.accessRole || member.accessLevel || 'read',
+          })),
+        };
       }
 
       user = await userService.update(authContext.userId, patch);

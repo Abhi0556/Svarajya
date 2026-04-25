@@ -141,13 +141,14 @@ export function FamilyTreeGame({ members, onAddMember, onRemoveMember }: FamilyT
                     <span className="text-xs font-bold uppercase tracking-widest block text-center">Adhipati</span>
                 </div>
 
-                {/* Family Nodes Container */}
-                <div className="z-10 flex flex-wrap justify-center gap-4 w-full">
+                {/* Family Nodes Container - Grid layout: 5 per row on large screens */}
+                <div className="z-10 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 w-full">
                     <AnimatePresence>
                         {members.length === 0 && !isAdding && (
                             <motion.div
-                                initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                                className="text-center text-[var(--color-rajya-muted)] text-sm italic w-full"
+                                initial={{ opacity: 0 }} 
+                                animate={{ opacity: 1 }}
+                                className="text-center text-[var(--color-rajya-muted)] text-sm italic col-span-full"
                             >
                                 Your Mandal is empty. You govern alone.
                             </motion.div>
@@ -160,7 +161,7 @@ export function FamilyTreeGame({ members, onAddMember, onRemoveMember }: FamilyT
                                 animate={{ opacity: 1, scale: 1, y: 0 }}
                                 exit={{ opacity: 0, scale: 0.8, y: 20 }}
                                 transition={{ delay: i * 0.1 }}
-                                className="relative bg-[var(--color-rajya-card)] border border-[var(--color-rajya-accent-dim)] rounded-xl p-4 w-[140px] shadow-lg group"
+                                className="relative bg-[var(--color-rajya-card)] border border-[var(--color-rajya-accent-dim)] rounded-xl p-4 w-full shadow-lg group"
                             >
                                 <button
                                     onClick={() => onRemoveMember(m.id)}
@@ -210,6 +211,11 @@ export function FamilyTreeGame({ members, onAddMember, onRemoveMember }: FamilyT
                                 <Plus className="w-5 h-5 group-hover:scale-110 transition-transform" />
                                 <span>Forge New Link (Max 5)</span>
                             </button>
+                        )}
+                        {members.length >= 5 && (
+                            <div className="text-center text-amber-400/60 text-sm py-4 border border-amber-400/20 rounded-2xl bg-amber-400/5">
+                                ✓ Maximum 5 members reached. Your Mandal is complete.
+                            </div>
                         )}
                     </motion.div>
                 ) : (

@@ -8,6 +8,7 @@ import { OnboardingStore } from "@/lib/stores/onboardingStore";
 import { PageGuide } from "@/components/ui/PageGuide";
 import { VideoTutorialPlaceholder } from "@/components/ui/VideoTutorialPlaceholder";
 import { createClient } from "@/lib/supabase/client";
+import { useToast } from "@/components/providers/ToastProvider";
 
 const STEPS = [
     { id: "family", icon: <Users className="w-5 h-5" />, label: "Family Members", desc: "Who depends on you financially?", route: "/foundation/family" },
@@ -48,6 +49,7 @@ export default function FoundationHub() {
     const [uploadError, setUploadError] = useState<string | null>(null);
     const [uploading, setUploading] = useState(false);
     const supabase = createClient();
+    const toast = useToast();
 
     useEffect(() => {
         const fetchProfile = async () => {
@@ -66,6 +68,7 @@ export default function FoundationHub() {
                         occupationType: profileData.occupationType || data.occupationType || "",
                         email: profileData.email || data.email || "",
                         mobile: profileData.phone || data.mobile || "",
+                        familyMembers: profileData.familyMembers || data.familyMembers || [],
                     }, { sync: false });
                 }
             } catch (err) {
@@ -176,6 +179,31 @@ export default function FoundationHub() {
             setUploadError("Failed to remove photo. Please try again.");
         } finally {
             setUploading(false);
+        }
+    };
+
+    const saveFamilyMembers = async (familyMembers: any[]) => {
+        try {
+            const response = await fetch('/api/profile', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    familyMembers,
+                }),
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to save family members');
+            }
+
+            toast('Family members saved successfully', 'success');
+            return true;
+        } catch (error) {
+            console.error('Error saving family members:', error);
+            toast('Failed to save family members. Please try again.', 'error');
+            return false;
         }
     };
 

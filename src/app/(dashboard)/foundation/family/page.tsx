@@ -1,49 +1,149 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { Users, ShieldAlert, CheckCircle2, ArrowLeft } from "lucide-react";
 import { FamilyTreeGame, FamilyMember } from "@/components/module1/FamilyTreeGame";
 import { VideoTutorialPlaceholder } from "@/components/ui/VideoTutorialPlaceholder";
-import { OnboardingStore } from "@/lib/onboardingStore";
+import { OnboardingStore } from "@/lib/stores/onboardingStore";
+import { useToast } from "@/components/providers/ToastProvider";
 
 export default function Submodule1B() {
     const router = useRouter();
     const existingFamily = OnboardingStore.get().familyMembers || [];
     const [step, setStep] = useState<"tutorial" | "mandal" | "win">("tutorial");
     const [members, setMembers] = useState<FamilyMember[]>(existingFamily as FamilyMember[]);
+    const [isLoading, setIsLoading] = useState(true);
+    const toast = useToast();
+
+    // Fetch existing family members from database on page load
+    useEffect(() => {
+        const fetchFamilyMembers = async () => {
+            setIsLoading(true);
+            try {
+                const response = await fetch('/api/profile');
+                if (response.ok) {
+                    const json = await response.json();
+                    const profileData = json?.data;
+                    console.log("Fetched profile data:", profileData);
+                    
+                    if (profileData?.familyMembers && profileData.familyMembers.length > 0) {
+                        // Transform API format back to component format
+                        const loadedMembers = profileData.familyMembers.map((member: any, index: number) => ({
+                            id: member.id || `member-${index}`,
+                            name: member.name || "",
+                            relationship: member.relation || "Other", // relation -> relationship
+                            dob: member.dob ? new Date(member.dob).toISOString().split('T')[0] : "",
+                            phone: member.phone || "",
+                            email: member.email || "",
+                            dependent: member.isDependent === true, // isDependent -> dependent
+                            nomineeEligible: member.nomineeEligible ?? true,
+                            accessRole: member.accessLevel === "write" ? "Executor" : 
+                                       member.accessLevel === "read" ? "Viewer" : 
+                                       member.accessLevel === "emergency" ? "Emergency-only" : "None", // accessLevel -> accessRole
+                        }));
+                        console.log("Loaded members from DB:", loadedMembers);
+                        setMembers(loadedMembers);
+                        OnboardingStore.set({ familyMembers: loadedMembers });
+                        setStep("mandal");
+                    } else {
+                        console.log("No family members found in database");
+                    }
+                } else {
+                    console.log("Failed to fetch profile:", response.status);
+                }
+            } catch (err) {
+                console.error('Failed to load family members:', err);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        
+        fetchFamilyMembers();
+    }, []);
 
     const handleAddMember = (memberData: Omit<FamilyMember, "id">) => {
+        console.log("Adding new member:", memberData);
+        
         // Max 5 members validation
         if (members.length >= 5) {
-            alert("Maximum 5 family members allowed.");
+            toast("Maximum 5 family members allowed.", "error");
             return;
         }
         
         // Mobile validation (10 digits)
         if (memberData.phone && !/^\d{10}$/.test(memberData.phone)) {
-            alert("Mobile number must be exactly 10 digits.");
+            toast("Mobile number must be exactly 10 digits.", "error");
             return;
         }
         
         // Email validation (@gmail.com)
         if (memberData.email && !memberData.email.endsWith("@gmail.com")) {
-            alert("Email must be @gmail.com");
+            toast("Email must be @gmail.com", "error");
             return;
         }
         
         const newMember = { ...memberData, id: Math.random().toString(36).substr(2, 9) };
-        setMembers([...members, newMember]);
+        // IMPORTANT: Appends to existing members using spread operator
+        const updatedMembers = [...members, newMember];
+        console.log("Total members after adding:", updatedMembers.length);
+        setMembers(updatedMembers);
     };
 
     const handleRemoveMember = (id: string) => {
-        setMembers(members.filter(m => m.id !== id));
+        const updatedMembers = members.filter(m => m.id !== id);
+        console.log("Member removed. Remaining:", updatedMembers.length);
+        setMembers(updatedMembers);
     };
 
-    const handleSealMandal = () => {
-        OnboardingStore.set({ familyMembers: members });
-        setStep("win");
+    const handleSealMandal = async () => {
+        try {
+            console.log("Saving ALL members to database. Total:", members.length);
+            
+            // Transform ALL family members to match API expected format
+            const transformedMembers = members.map(member => ({
+                name: member.name,
+                relation: member.relationship, // relationship -> relation
+                dob: member.dob,
+                isDependent: member.dependent, // dependent -> isDependent
+                nomineeEligible: member.nomineeEligible ?? true,
+                accessLevel: member.accessRole === "Executor" ? "write" :
+                            member.accessRole === "Viewer" ? "read" :
+                            member.accessRole === "Emergency-only" ? "emergency" : "read", // accessRole -> accessLevel
+                phone: member.phone || "",
+                email: member.email || "",
+            }));
+
+            console.log("Sending to API:", transformedMembers);
+
+            const response = await fetch('/api/profile', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    familyMembers: transformedMembers, // Sends ALL current members
+                }),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                console.error("API error:", errorData);
+                throw new Error(errorData.message || 'Failed to save family members');
+            }
+
+            const responseData = await response.json();
+            console.log("API success:", responseData);
+
+            // Save to local store
+            OnboardingStore.set({ familyMembers: members });
+            toast(`${members.length} family member(s) saved successfully`, 'success');
+            setStep("win");
+        } catch (error) {
+            console.error('Error saving family members:', error);
+            toast(error instanceof Error ? error.message : 'Failed to save family members. Please try again.', 'error');
+        }
     };
 
     const handleFinish = () => {
@@ -52,6 +152,20 @@ export default function Submodule1B() {
 
     const dependencyCount = members.filter(m => m.dependent).length;
     const loadIndex = members.length > 0 ? Math.round((dependencyCount / members.length) * 100) : 0;
+
+    if (isLoading) {
+        return (
+            <div className="flex flex-col min-h-screen relative p-6">
+                <div className="absolute inset-0 bg-gradient-to-b from-slate-950 via-[#0a1628] to-slate-950 pointer-events-none" />
+                <div className="relative z-10 flex items-center justify-center min-h-screen">
+                    <div className="text-amber-400 text-center">
+                        <div className="w-8 h-8 border-2 border-amber-400 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                        <p className="text-white/60">Loading your family members...</p>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="flex flex-col min-h-screen relative p-6">
@@ -66,6 +180,9 @@ export default function Submodule1B() {
                     <div>
                         <h1 className="text-lg font-semibold text-white">Family Members</h1>
                         <p className="text-xs text-white/35 mt-0.5">Who depends on you financially?</p>
+                        {members.length > 0 && (
+                            <p className="text-xs text-amber-400 mt-1">{members.length}/5 members added</p>
+                        )}
                     </div>
                 </div>
 
@@ -119,7 +236,6 @@ export default function Submodule1B() {
                                 members={members}
                                 onAddMember={handleAddMember}
                                 onRemoveMember={handleRemoveMember}
-            
                             />
 
                             <div className="pt-8">
@@ -127,7 +243,7 @@ export default function Submodule1B() {
                                     onClick={handleSealMandal}
                                     className="w-full bg-amber-400 text-black font-semibold py-4 rounded-xl text-sm hover:bg-amber-300 transition-colors"
                                 >
-                                    Save & Continue
+                                    Save & Continue ({members.length}/5 members)
                                 </button>
                                 {members.length === 0 && (
                                     <p className="text-xs text-center text-white/40 mt-2">
@@ -149,6 +265,7 @@ export default function Submodule1B() {
                             <div className="text-center space-y-3">
                                 <CheckCircle2 className="w-14 h-14 text-emerald-400 mx-auto" />
                                 <h2 className="text-2xl font-semibold text-white">Family Added</h2>
+                                <p className="text-white/40 text-sm">{members.length} member(s) in your Mandal</p>
                             </div>
 
                             <div className="bg-white/5 border border-white/10 rounded-xl p-5 text-center">
