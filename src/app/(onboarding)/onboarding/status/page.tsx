@@ -1,12 +1,12 @@
 ﻿"use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { OnboardingStore } from "@/lib/stores/onboardingStore";
 
-const OPTIONS = ["Single", "Married", "Other", "Prefer not to say"];
+const OPTIONS = ["Single", "Married", "Divorced", "Widowed"];
 
 function ProgressBar({ step }: { step: number }) {
     return (
@@ -20,19 +20,77 @@ function ProgressBar({ step }: { step: number }) {
 
 export default function StatusStep() {
     const router = useRouter();
-    const [selected, setSelected] = useState(() => OnboardingStore.get().maritalStatus || "");
+    const stored = OnboardingStore.get();
+    const [selected, setSelected] = useState(() => stored.maritalStatus || "");
     const [placed, setPlaced] = useState(false);
+    const [error, setError] = useState("");
+    const [isLoading, setIsLoading] = useState(true);
 
-    const handleSelect = (opt: string) => {
-        setSelected(opt);
-        OnboardingStore.set({ maritalStatus: opt });
+    useEffect(() => {
+        const fetchProfile = async () => {
+            try {
+                const response = await fetch('/api/profile');
+                if (!response.ok) return;
+                const json = await response.json();
+                const profile = json?.data;
+                if (profile?.maritalStatus) {
+                    setSelected(profile.maritalStatus);
+                    OnboardingStore.set({ maritalStatus: profile.maritalStatus }, { sync: false });
+                }
+            } catch (error) {
+                console.error('Failed to fetch profile for status page:', error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchProfile();
+    }, []);
+
+    const handleContinue = () => {
+        if (!selected) {
+            setError("Please pick your current marital status.");
+            return;
+        }
+
+        OnboardingStore.set({ maritalStatus: selected });
         setPlaced(true);
         setTimeout(() => router.push("/onboarding/occupation"), 800);
     };
 
+    if (isLoading) {
+        return (
+            <div className="flex flex-col min-h-screen p-6 relative">
+                <div className="absolute inset-0 bg-linear-to-b from-slate-950 via-[#0a1628] to-slate-950 pointer-events-none" />
+                <div className="relative z-10 flex flex-col min-h-screen">
+                    <div className="flex items-center gap-2 pt-10 mb-2">
+                        <div className="w-9 h-9 rounded-xl bg-white/6 animate-pulse" />
+                        <div className="h-3 w-24 bg-white/10 rounded animate-pulse" />
+                    </div>
+                    <div className="h-1 w-full bg-white/10 rounded-full mt-3 animate-pulse" />
+                    <div className="flex-1 flex flex-col justify-center space-y-8 mt-12">
+                        <div className="flex justify-center">
+                            <div className="w-44 h-20 bg-white/6 rounded-xl animate-pulse" />
+                        </div>
+                        <div className="space-y-6">
+                            <div className="space-y-2">
+                                <div className="h-4 w-32 bg-white/10 rounded animate-pulse" />
+                                <div className="h-3 w-48 bg-white/5 rounded animate-pulse" />
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                                {[1, 2, 3, 4].map(i => (
+                                    <div key={i} className="h-24 bg-white/6 rounded-xl animate-pulse" />
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="flex flex-col min-h-screen p-6 relative">
-            <div className="absolute inset-0 bg-gradient-to-b from-slate-950 via-[#0a1628] to-slate-950 pointer-events-none" />
+            <div className="absolute inset-0 bg-linear-to-b from-slate-950 via-[#0a1628] to-slate-950 pointer-events-none" />
             <div className="relative z-10 flex flex-col min-h-screen">
                 {/* Back + step */}
                 <div className="flex items-center gap-2 pt-10 mb-2">
@@ -61,24 +119,32 @@ export default function StatusStep() {
                             <h1 className="text-xl font-semibold text-white mb-1">Household Structure</h1>
                             <p className="text-xs text-white/40">This helps us understand dependents and future legacy planning.</p>
                         </div>
-                        <div className="grid grid-cols-2 gap-3">
-                            {OPTIONS.map(opt => (
-                                <motion.button key={opt} whileTap={{ scale: 0.97 }} onClick={() => handleSelect(opt)}
-                                    className={`py-4 rounded-xl border text-sm font-medium transition-all ${selected === opt ? "bg-amber-400/15 border-amber-400 text-amber-400" : "bg-white/5 border-white/10 text-white/60 hover:border-white/30"
-                                        }`}>
-                                    {opt}
-                                </motion.button>
-                            ))}
+
+                        <div>
+                            <p className="text-sm text-white/60 uppercase tracking-[0.18em] mb-3">Marital status</p>
+                            <div className="grid grid-cols-2 gap-3">
+                                {OPTIONS.map(opt => (
+                                    <button key={opt} type="button" onClick={() => { setSelected(opt); setError(""); }}
+                                        className={`py-4 rounded-xl border text-sm font-medium transition-all ${selected === opt ? "bg-amber-400/15 border-amber-400 text-amber-400" : "bg-white/5 border-white/10 text-white/60 hover:border-white/30"}`}>
+                                        {opt}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
+
+                        {error && <p className="text-red-400 text-xs">{error}</p>}
                         {placed && selected && (
                             <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-emerald-400 text-sm text-center">
-                                âœ“ Council hall assembled.
+                                ✓ Council hall assembled.
                             </motion.p>
                         )}
                     </div>
                 </div>
 
-                <div className="pb-4">
+                <div className="pb-4 space-y-3">
+                    <button onClick={handleContinue} className="w-full bg-amber-400 text-black font-semibold py-4 rounded-xl text-sm hover:bg-amber-300 transition-colors">
+                        Confirm status
+                    </button>
                     <button onClick={() => router.push("/onboarding/occupation")} className="w-full text-white/35 text-sm py-3 hover:text-white/60 transition-colors">
                         Skip this step
                     </button>

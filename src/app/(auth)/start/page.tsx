@@ -69,7 +69,7 @@ export default function AuthGateway() {
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState("");
+    const [error, setError] = useState<React.ReactNode>("");
     const [msg, setMsg] = useState("");
     const [countdown, setCountdown] = useState(10);
 
@@ -210,10 +210,29 @@ export default function AuthGateway() {
                         // Check if this user has a confirmed email
                         const { data: methods } = await supabase.auth.signInWithOtp({ email: trimmedEmail, options: { shouldCreateUser: false } });
                         // If signInWithOtp succeeds without error for existing user, account exists and is verified
-                        setError("An account with this email already exists. Please login instead.");
+                        setError(
+                            <span>
+                                Email already registered. Please{" "}
+                                <button type="button" onClick={() => switchMode("login")} className="underline font-semibold hover:text-red-300">
+                                    login instead
+                                </button>.
+                            </span>
+                        );
                     } else {
                         setError(getErrorMessage(signUpError, "Registration failed. Please try again."));
                     }
+                    return;
+                }
+
+                if (data.user && data.user.identities && data.user.identities.length === 0) {
+                    setError(
+                        <span>
+                            Email already registered. Please{" "}
+                            <button type="button" onClick={() => switchMode("login")} className="underline font-semibold hover:text-red-300">
+                                login instead
+                            </button>.
+                        </span>
+                    );
                     return;
                 }
 
@@ -261,6 +280,20 @@ export default function AuthGateway() {
 
                 // Login success — clear rate limit
                 clearRateLimit(storageKey, trimmedEmail);
+
+                try {
+                    const profileRes = await fetch("/api/profile");
+                    if (profileRes.ok) {
+                        const { data } = await profileRes.json();
+                        if (data && data.isFirstLogin) {
+                            router.push("/onboarding/intro");
+                            return;
+                        }
+                    }
+                } catch (e) {
+                    console.error("Failed to check first login status", e);
+                }
+
                 router.push("/rajya");
             }
         } catch (err: unknown) {

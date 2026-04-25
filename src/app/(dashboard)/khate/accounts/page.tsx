@@ -36,16 +36,19 @@ export default function BankHub() {
     }, []);
 
     const accounts = summary?.accounts || [];
-    const metrics = summary?.metrics.health;
-    const totalLiquid = summary?.metrics.totalLiquid || 0;
-    const flow = summary?.metrics.flow || { inflow: 0, outflow: 0, surplus: 0 };
+    const metrics = summary?.metrics?.health;
+    const totalLiquid = summary?.metrics?.totalLiquid ?? 0;
+    const flow = summary?.metrics?.flow ?? { inflow: 0, outflow: 0, surplus: 0 };
+    const efStatus = metrics?.efStatus ?? "unknown";
+    const emergencyFundMonths = metrics?.emergencyFundMonths ?? 0;
+    const idleAccounts = metrics?.idleAccounts ?? [];
 
     // Urgent Alerts Logic
     const alerts: { id: string, text: string, type: "critical" | "warning", link: string }[] = [];
     if (metrics) {
-        if (metrics.efStatus === "critical") {
+        if (efStatus === "critical") {
             alerts.push({ id: "ef", text: "Emergency fund below 1 month.", type: "critical", link: "/khate/accounts/flow" });
-        } else if (metrics.efStatus === "low") {
+        } else if (efStatus === "low") {
             alerts.push({ id: "ef", text: "Emergency fund below 3 months.", type: "warning", link: "/khate/accounts/flow" });
         }
 
@@ -54,8 +57,8 @@ export default function BankHub() {
             alerts.push({ id: "dormant", text: `${dormantUpdates.length} account(s) not updated in 60 days.`, type: "warning", link: "/khate/accounts" });
         }
 
-        if (metrics.idleAccounts.length > 0) {
-            alerts.push({ id: "idle", text: `${metrics.idleAccounts.length} account(s) exceed idle threshold.`, type: "warning", link: "/khate/accounts/idle" });
+        if (idleAccounts.length > 0) {
+            alerts.push({ id: "idle", text: `${idleAccounts.length} account(s) exceed idle threshold.`, type: "warning", link: "/khate/accounts/idle" });
         }
     }
 
@@ -117,31 +120,37 @@ export default function BankHub() {
 
                             {/* Health Badges */}
                             <div className="flex flex-col items-center mt-5">
-                                {metrics?.outflowIsZero ? (
-                                    <div className="flex flex-col items-center gap-2">
-                                        <p className="text-xs text-white/50">Add expenses in Vyaya to calculate emergency readiness.</p>
-                                        <Link href="/vyaya" className="px-4 py-1.5 rounded-full text-xs font-semibold bg-white/10 hover:bg-white/20 transition-colors">
-                                            Go to Vyaya
-                                        </Link>
-                                    </div>
+                                {metrics ? (
+                                    metrics.outflowIsZero ? (
+                                        <div className="flex flex-col items-center gap-2">
+                                            <p className="text-xs text-white/50">Add expenses in Vyaya to calculate emergency readiness.</p>
+                                            <Link href="/vyaya" className="px-4 py-1.5 rounded-full text-xs font-semibold bg-white/10 hover:bg-white/20 transition-colors">
+                                                Go to Vyaya
+                                            </Link>
+                                        </div>
+                                    ) : (
+                                        <div className="group relative">
+                                            <div className={`px-4 py-2 rounded-full text-sm font-semibold flex items-center gap-1.5 border
+                                                ${efStatus === "strong" ? "bg-emerald-500/20 border-emerald-500/30 text-emerald-300" :
+                                                    efStatus === "ok" ? "bg-blue-500/20 border-blue-500/30 text-blue-300" :
+                                                        efStatus === "low" ? "bg-amber-500/20 border-amber-500/30 text-amber-300" :
+                                                            "bg-red-500/20 border-red-500/30 text-red-300"}`}>
+                                                <Scale className="w-4 h-4" />
+                                                {emergencyFundMonths.toFixed(1)} Months Covered
+                                            </div>
+                                            <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 w-48 bg-black/90 text-white text-[10px] p-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none text-center border border-white/10 z-20">
+                                                Emergency Fund = Liquid Assets ÷ Monthly Expenses (from Vyaya).
+                                                <br /><br />
+                                                {efStatus === "critical" ? "Critical: Less than 1 month." :
+                                                    efStatus === "low" ? "Low: Below recommended safety buffer." :
+                                                        efStatus === "ok" ? "Stable: 3-6 months covered." :
+                                                            "Strong: More than 6 months covered."}
+                                            </div>
+                                        </div>
+                                    )
                                 ) : (
-                                    <div className="group relative">
-                                        <div className={`px-4 py-2 rounded-full text-sm font-semibold flex items-center gap-1.5 border
-                                            ${metrics?.efStatus === "strong" ? "bg-emerald-500/20 border-emerald-500/30 text-emerald-300" :
-                                                metrics?.efStatus === "ok" ? "bg-blue-500/20 border-blue-500/30 text-blue-300" :
-                                                    metrics?.efStatus === "low" ? "bg-amber-500/20 border-amber-500/30 text-amber-300" :
-                                                        "bg-red-500/20 border-red-500/30 text-red-300"}`}>
-                                            <Scale className="w-4 h-4" />
-                                            {metrics?.emergencyFundMonths.toFixed(1)} Months Covered
-                                        </div>
-                                        <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 w-48 bg-black/90 text-white text-[10px] p-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none text-center border border-white/10 z-20">
-                                            Emergency Fund = Liquid Assets ÷ Monthly Expenses (from Vyaya).
-                                            <br /><br />
-                                            {metrics?.efStatus === "critical" ? "Critical: Less than 1 month." :
-                                                metrics?.efStatus === "low" ? "Low: Below recommended safety buffer." :
-                                                    metrics?.efStatus === "ok" ? "Stable: 3-6 months covered." :
-                                                        "Strong: More than 6 months covered."}
-                                        </div>
+                                    <div className="text-center text-sm text-white/50 px-4">
+                                        Liquidity health metrics are unavailable right now. Add or refresh your account data to see readiness and emergency fund estimates.
                                     </div>
                                 )}
                             </div>

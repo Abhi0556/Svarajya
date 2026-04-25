@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Users, GraduationCap, Camera, CheckCircle2, Trash2, Edit2 } from "lucide-react";
-import { OnboardingStore } from "@/lib/onboardingStore";
+import { OnboardingStore } from "@/lib/stores/onboardingStore";
 import { PageGuide } from "@/components/ui/PageGuide";
 import { VideoTutorialPlaceholder } from "@/components/ui/VideoTutorialPlaceholder";
 import { createClient } from "@/lib/supabase/client";
@@ -17,11 +17,39 @@ const STEPS = [
 export default function FoundationHub() {
     const router = useRouter();
     const data = OnboardingStore.get();
+    const [profile, setProfile] = useState<null | Record<string, any>>(null);
     const [photoUploaded, setPhotoUploaded] = useState(false);
     const [photoUrl, setPhotoUrl] = useState<string | null>(null);
     const [uploadError, setUploadError] = useState<string | null>(null);
     const [uploading, setUploading] = useState(false);
     const supabase = createClient();
+
+    useEffect(() => {
+        const fetchProfile = async () => {
+            try {
+                const response = await fetch('/api/profile');
+                if (!response.ok) return;
+
+                const json = await response.json();
+                const profileData = json?.data;
+                if (profileData) {
+                    setProfile(profileData);
+                    OnboardingStore.set({
+                        fullName: profileData.name || data.fullName || "",
+                        dob: profileData.dob || data.dob || "",
+                        lifePhase: profileData.lifePhase || data.lifePhase || "",
+                        occupationType: profileData.occupationType || data.occupationType || "",
+                        email: profileData.email || data.email || "",
+                        mobile: profileData.phone || data.mobile || "",
+                    }, { sync: false });
+                }
+            } catch (err) {
+                console.error('Failed to load foundation profile:', err);
+            }
+        };
+
+        fetchProfile();
+    }, []);
 
     // Fetch existing profile photo on load
     useEffect(() => {
@@ -143,7 +171,6 @@ export default function FoundationHub() {
                         description="Complete your personal profile, add family members, and record your education. This forms the base of your financial kingdom."
                         actions={[{ emoji: "👤", label: "Profile" }, { emoji: "👪", label: "Family" }, { emoji: "🎓", label: "Education" }]}
                     />
-                    <div className="h-4" />
                 </div>
 
                 {/* User identity card — populated from onboarding */}
@@ -202,12 +229,17 @@ export default function FoundationHub() {
                             className="flex-1 min-w-0 cursor-pointer"
                             onClick={() => router.push("/onboarding/name")}
                         >
-                            <p className="font-semibold text-white truncate">{data.fullName || "Your Name"}</p>
+                            <p className="font-semibold text-white truncate">{profile?.name || data.fullName || "Your Name"}</p>
                             <p className="text-xs text-white/40 mt-0.5">
-                                {data.occupationType || "Occupation"} · {data.lifePhase || "Nirmaan"} phase
+                                {profile?.occupationType || data.occupationType || "Occupation"} · {profile?.lifePhase || data.lifePhase || "Nirmaan"} phase
                             </p>
-                            {data.mobile && (
-                                <p className="text-xs text-white/30 mt-0.5">+91 {data.mobile}</p>
+                            {(profile?.phone || data.mobile) && (
+                                <div className="flex items-center gap-2">
+                                    <p className="text-xs text-white/30 mt-0.5">+91 {profile?.phone || data.mobile}</p>
+                                    {profile?.isMobileVerified && (
+                                        <span className="text-emerald-400 text-[10px] uppercase tracking-[0.15em] font-medium">Verified</span>
+                                    )}
+                                </div>
                             )}
                         </div>
                         <button 

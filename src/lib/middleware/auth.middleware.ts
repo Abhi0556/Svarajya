@@ -71,17 +71,13 @@ export function withAuth(
         );
       }
 
-      // Find or create user atomically strictly avoiding concurrency Unique Constraint failures
-      let user = await prisma.user.upsert({
-        where: { id: authUser.id },
-        update: {}, // Do nothing if exists
-        create: {
-          id: authUser.id,
-          email: authUser.email,
-          status: 'PENDING_VERIFICATION',
-          profileType: 'INDIVIDUAL_SALARIED', // Default
-        },
-      });
+      // Attach auth context without creating a user record automatically.
+      // User persistence is handled by onboarding/profile flow.
+      const authContext: AuthContext = {
+        userId: authUser.id,
+        email: authUser.email ?? undefined,
+        authId: authUser.id,
+      };
 
       // Check auth level requirements
       if (requiredLevel === AuthLevel.VERIFIED) {
@@ -95,7 +91,8 @@ export function withAuth(
       }
 
       if (requiredLevel === AuthLevel.PROFILE_COMPLETE) {
-        if (!user.name || user.status === 'PENDING_VERIFICATION') {
+        const user = await prisma.user.findUnique({ where: { id: authUser.id } });
+        if (!user || !user.name || user.status === 'PENDING_VERIFICATION') {
           return errorResponse(
             ErrorCodes.FORBIDDEN,
             'Profile completion required',
@@ -114,11 +111,7 @@ export function withAuth(
       }
 
       // Attach auth context to request
-      (request as any).authContext = {
-        userId: user.id,
-        email: user.email,
-        authId: authUser.id,
-      } as AuthContext;
+      (request as any).authContext = authContext;
 
       // Call handler with attached context
       return handler(request, context);

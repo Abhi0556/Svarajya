@@ -1,9 +1,9 @@
 ﻿"use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Lock } from "lucide-react";
 import { OnboardingStore, deriveLifePhase } from "@/lib/stores/onboardingStore";
 
 function ProgressBar({ step }: { step: number }) {
@@ -22,8 +22,34 @@ export default function DOBStep() {
     const [lifePhase, setLifePhase] = useState(() => OnboardingStore.get().lifePhase || "");
     const [error, setError] = useState("");
     const [placed, setPlaced] = useState(false);
+    const [isReadOnly, setIsReadOnly] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchProfile = async () => {
+            try {
+                const response = await fetch('/api/profile');
+                if (!response.ok) return;
+                const json = await response.json();
+                const profile = json?.data;
+                if (profile?.dob) {
+                    const dobValue = profile.dob.split('T')[0];
+                    setDob(dobValue);
+                    setLifePhase(deriveLifePhase(dobValue));
+                    setIsReadOnly(true);
+                    OnboardingStore.set({ dob: dobValue, lifePhase: deriveLifePhase(dobValue) }, { sync: false });
+                }
+            } catch (error) {
+                console.error('Failed to load DOB from profile:', error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchProfile();
+    }, []);
 
     const handleDobChange = (val: string) => {
+        if (isReadOnly) return;
         setDob(val);
         setError("");
         if (val) setLifePhase(deriveLifePhase(val));
@@ -41,9 +67,36 @@ export default function DOBStep() {
 
     const year = dob ? new Date(dob).getFullYear() : null;
 
+    if (isLoading) {
+        return (
+            <div className="flex flex-col min-h-screen p-6 relative">
+                <div className="absolute inset-0 bg-linear-to-b from-slate-950 via-[#0a1628] to-slate-950 pointer-events-none" />
+                <div className="relative z-10 flex flex-col min-h-screen">
+                    <div className="flex items-center gap-2 pt-10 mb-2">
+                        <div className="w-9 h-9 rounded-xl bg-white/6 animate-pulse" />
+                        <div className="h-3 w-24 bg-white/10 rounded animate-pulse" />
+                    </div>
+                    <div className="h-1 w-full bg-white/10 rounded-full mt-3 animate-pulse" />
+                    <div className="flex-1 flex flex-col justify-center space-y-8 mt-12">
+                        <div className="flex justify-center">
+                            <div className="w-44 h-24 bg-white/6 rounded-xl animate-pulse" />
+                        </div>
+                        <div className="space-y-6">
+                            <div className="space-y-2">
+                                <div className="h-4 w-32 bg-white/10 rounded animate-pulse" />
+                                <div className="h-3 w-48 bg-white/5 rounded animate-pulse" />
+                            </div>
+                            <div className="h-12 w-full bg-white/6 rounded-xl animate-pulse" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="flex flex-col min-h-screen p-6 relative">
-            <div className="absolute inset-0 bg-gradient-to-b from-slate-950 via-[#0a1628] to-slate-950 pointer-events-none" />
+            <div className="absolute inset-0 bg-linear-to-b from-slate-950 via-[#0a1628] to-slate-950 pointer-events-none" />
             <div className="relative z-10 flex flex-col min-h-screen">
                 {/* Back + step */}
                 <div className="flex items-center gap-2 pt-10 mb-2">
@@ -81,18 +134,29 @@ export default function DOBStep() {
                         </div>
 
                         <div className="space-y-2">
-                            <label className="text-xs text-white/50 uppercase tracking-wider">Date of birth</label>
+                            <div className="flex items-center justify-between gap-2">
+                                <label className="text-xs text-white/50 uppercase tracking-wider">Date of birth</label>
+                                {isReadOnly && (
+                                    <span className="inline-flex items-center gap-1 text-emerald-400 text-[11px] uppercase tracking-[0.15em]">
+                                        <Lock className="w-3.5 h-3.5" /> Verified
+                                    </span>
+                                )}
+                            </div>
                             <input
                                 type="date"
                                 value={dob}
                                 onChange={e => handleDobChange(e.target.value)}
                                 max={new Date().toISOString().split("T")[0]}
-                                className="w-full bg-white/6 border border-white/15 rounded-xl px-4 py-4 text-white focus:outline-none focus:border-amber-400/60 transition-colors"
+                                className="w-full bg-white/6 border border-white/15 rounded-xl px-4 py-4 text-white focus:outline-none focus:border-amber-400/60 transition-colors disabled:cursor-not-allowed disabled:opacity-60"
+                                disabled={isReadOnly}
                             />
                             <p className="text-[10px] text-white/30 italic">
                                 Note: On iPhone/Safari, tap the Month & Year at the top of the calendar to scroll rapidly to your birth year.
                             </p>
                             {error && <p className="text-red-400 text-xs">{error}</p>}
+                            {isReadOnly && (
+                                <p className="text-white/45 text-[10px] italic">Date of Birth cannot be changed after verification.</p>
+                            )}
                         </div>
 
                         {lifePhase && (

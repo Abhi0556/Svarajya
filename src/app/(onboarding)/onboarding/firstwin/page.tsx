@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from "react";
 import { motion } from "framer-motion";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Award, Crown } from "lucide-react";
+import { Award, CheckCircle2, Crown } from "lucide-react";
 import { OnboardingStore } from "@/lib/stores/onboardingStore";
 import { createClient } from "@/lib/supabase/client";
 
@@ -22,6 +22,14 @@ function FirstWinContent() {
     const [priority, setPriority] = useState("");
     const [profileCompletion, setProfileCompletion] = useState(0);
     const [firstName, setFirstName] = useState("Ruler");
+    const [progressChecks, setProgressChecks] = useState([
+        { label: "Name", done: false },
+        { label: "Date of Birth", done: false },
+        { label: "Marital Status", done: false },
+        { label: "Occupation", done: false },
+        { label: "Contact Info", done: false },
+    ]);
+
     const lastLoginDisplay = (() => {
         if (typeof window === "undefined") return null;
         const stored = localStorage.getItem(LAST_LOGIN_KEY);
@@ -31,42 +39,38 @@ function FirstWinContent() {
     })();
 
     useEffect(() => {
-        // Fetch name and profile completion from DB
-        fetch("/api/profile")
-            .then(r => (r.ok ? r.json() : null))
-            .then(profile => {
-                if (profile?.fullName) {
-                    setFirstName(profile.fullName.split(" ")[0]);
-                } else {
-                    const stored = OnboardingStore.get().fullName;
-                    if (stored) setFirstName(stored.split(" ")[0]);
-                }
-                
-                // Calculate profile completion percentage
-                let completed = 0;
-                let total = 0;
-                
-                if (profile?.fullName) completed++;
-                total++;
-                
-                if (profile?.dob) completed++;
-                total++;
-                
-                if (profile?.mobile) completed++;
-                total++;
-                
-                if (profile?.familyMembers && profile.familyMembers.length > 0) completed++;
-                total++;
-                
-                if (profile?.education) completed++;
-                total++;
-                
-                setProfileCompletion(total > 0 ? Math.round((completed / total) * 100) : 0);
-            })
-            .catch(() => {
-                const stored = OnboardingStore.get().fullName;
-                if (stored) setFirstName(stored.split(" ")[0]);
-            });
+        const loadProfileCompletion = async () => {
+            try {
+                const profileResponse = await fetch('/api/profile');
+                const profileJson = profileResponse.ok ? await profileResponse.json() : null;
+                const profile = profileJson?.data;
+
+                const profileName = profile?.name || "";
+                if (profileName) setFirstName(profileName.split(' ')[0]);
+
+                const checkData = [
+                    { label: "Name", done: !!profile?.name },
+                    { label: "Date of Birth", done: !!profile?.dob },
+                    { label: "Marital Status", done: !!profile?.maritalStatus },
+                    { label: "Occupation", done: !!profile?.occupationType },
+                    { label: "Contact Info", done: !!profile?.mobile && profile?.isMobileVerified === true },
+                ];
+
+                setProgressChecks(checkData);
+                const completed = checkData.filter(c => c.done).length;
+                setProfileCompletion(Math.round((completed / checkData.length) * 100));
+            } catch (error) {
+                console.error('Failed to load progress data:', error);
+            }
+        };
+
+        loadProfileCompletion();
+
+        if (typeof window !== 'undefined') {
+            const onFocus = () => loadProfileCompletion();
+            window.addEventListener('focus', onFocus);
+            return () => window.removeEventListener('focus', onFocus);
+        }
     }, []);
 
     const handleGoToDashboard = async () => {
@@ -75,15 +79,36 @@ function FirstWinContent() {
         try {
             const supabase = createClient();
             await supabase.auth.updateUser({ data: { onboarding_completed: true } });
-        } catch {/* non-critical */}
+            const res = await fetch("/api/profile", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ isFirstLogin: false })
+            });
+            if (!res.ok) {
+                console.error("Failed to update first login status:", await res.text());
+            }
+        } catch (e) {
+            console.error("Error finalizing onboarding:", e);
+        }
         router.push("/rajya");
     };
 
-    // --- RETURNING USER VIEW ---
+    const progressRows = progressChecks.map(check => (
+        <div key={check.label} className="flex items-center gap-3 rounded-2xl bg-white/5 border border-white/10 p-4">
+            <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${check.done ? 'bg-emerald-500/15 text-emerald-300' : 'bg-white/5 text-white/40'}`}>
+                <CheckCircle2 className="w-5 h-5" />
+            </div>
+            <div>
+                <p className={`text-sm font-medium ${check.done ? 'text-white' : 'text-white/60'}`}>{check.label}</p>
+                <p className="text-[11px] text-white/35">{check.done ? 'Completed' : 'Pending information'}</p>
+            </div>
+        </div>
+    ));
+
     if (isReturning) {
         return (
             <div className="flex flex-col min-h-screen p-6 relative">
-                <div className="absolute inset-0 bg-gradient-to-b from-slate-950 via-[#0a1628] to-slate-950 pointer-events-none" />
+                <div className="absolute inset-0 bg-linear-to-b from-slate-950 via-[#0a1628] to-slate-950 pointer-events-none" />
                 <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-72 h-72 bg-amber-400/6 blur-[100px] rounded-full pointer-events-none" />
 
                 <div className="relative z-10 flex flex-col min-h-screen items-center justify-center">
@@ -106,11 +131,13 @@ function FirstWinContent() {
                         <h1 className="text-3xl font-display text-amber-400">{firstName}</h1>
                         <p className="text-white/60 text-sm">Your Rajya awaits your command.</p>
                         {lastLoginDisplay && (
-                            <p className="text-white/30 text-xs mt-2">
-                                Last session: {lastLoginDisplay}
-                            </p>
+                            <p className="text-white/30 text-xs mt-2">Last session: {lastLoginDisplay}</p>
                         )}
                     </motion.div>
+
+                    <div className="w-full max-w-md space-y-3 mb-10">
+                        {progressRows}
+                    </div>
 
                     <motion.button
                         initial={{ opacity: 0, y: 16 }}
@@ -126,15 +153,13 @@ function FirstWinContent() {
         );
     }
 
-    // --- NEW USER / FIRST-TIME VIEW ---
     return (
         <div className="flex flex-col min-h-screen p-6 relative">
-            <div className="absolute inset-0 bg-gradient-to-b from-slate-950 via-[#0a1628] to-slate-950 pointer-events-none" />
+            <div className="absolute inset-0 bg-linear-to-b from-slate-950 via-[#0a1628] to-slate-950 pointer-events-none" />
             <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-72 h-72 bg-amber-400/6 blur-[100px] rounded-full pointer-events-none" />
 
             <div className="relative z-10 flex flex-col min-h-screen">
                 <div className="pt-10 flex flex-col items-center space-y-4">
-                    {/* Badge */}
                     <motion.div
                         initial={{ scale: 0, rotate: -20 }}
                         animate={{ scale: 1, rotate: 0 }}
@@ -157,7 +182,6 @@ function FirstWinContent() {
                         <h1 className="text-2xl font-semibold text-white">Rajya Foundation Complete</h1>
                     </motion.div>
 
-                    {/* Progress Bar based on profile completion */}
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
@@ -174,43 +198,32 @@ function FirstWinContent() {
                             />
                         </div>
                         <p className="text-amber-400 font-bold text-lg">{profileCompletion}%</p>
-                        <p className="text-white/40 text-xs mt-1">
-                            You have established the base of your financial kingdom.
-                        </p>
+                        <p className="text-white/40 text-xs mt-1">You have established the base of your financial kingdom.</p>
                     </motion.div>
                 </div>
 
-                {/* Priority selector - only Savings and Family Security */}
                 <motion.div
                     initial={{ opacity: 0, y: 16 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 1.2 }}
                     className="mt-6 flex-1 flex flex-col justify-center"
                 >
-                    <p className="text-sm text-white/60 text-center mb-4">
-                        Next: choose your first priority.
-                    </p>
+                    <p className="text-sm text-white/60 text-center mb-4">Next: choose your first priority.</p>
                     <div className="grid grid-cols-2 gap-3 pb-8">
                         {PRIORITIES.map(p => (
                             <button
                                 key={p.id}
                                 onClick={() => setPriority(p.id)}
-                                className={`p-3 rounded-xl border text-left transition-all hover:-translate-y-1 ${priority === p.id
-                                    ? "bg-amber-400/15 border-amber-400"
-                                    : "bg-white/5 border-white/10 hover:border-amber-400/30"
-                                    }`}
+                                className={`p-3 rounded-xl border text-left transition-all hover:-translate-y-1 ${priority === p.id ? "bg-amber-400/15 border-amber-400" : "bg-white/5 border-white/10 hover:border-amber-400/30"}`}
                             >
                                 <span className="text-xl">{p.icon}</span>
-                                <p className={`text-sm font-medium mt-1 ${priority === p.id ? "text-amber-400" : "text-white"}`}>
-                                    {p.label}
-                                </p>
+                                <p className={`text-sm font-medium mt-1 ${priority === p.id ? "text-amber-400" : "text-white"}`}>{p.label}</p>
                                 <p className="text-xs text-white/35 mt-0.5 leading-tight">{p.desc}</p>
                             </button>
                         ))}
                     </div>
                 </motion.div>
 
-                {/* Go to Dashboard Button */}
                 <motion.div
                     initial={{ opacity: 0, y: 16 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -225,9 +238,17 @@ function FirstWinContent() {
                     </button>
                 </motion.div>
 
-                {/* Welcome hint */}
+                <motion.div
+                    initial={{ opacity: 0, y: 16 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 1.8 }}
+                    className="space-y-3 hidden"
+                >
+                    {progressRows}
+                </motion.div>
+
                 {firstName && (
-                    <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.8 }} className="text-center text-white/35 text-xs pb-6">
+                    <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 2.1 }} className="text-center text-white/35 text-xs pb-6">
                         Welcome to Sva-Rajya, {firstName}. Tap a priority above to enter your Rajya.
                     </motion.p>
                 )}

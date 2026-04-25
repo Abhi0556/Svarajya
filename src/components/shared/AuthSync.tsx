@@ -53,11 +53,21 @@ export function AuthSync() {
             }
 
             // KEY LOGIC: Check if user has ever completed onboarding
-            // We store onboarding_completed = true in Supabase user_metadata — zero DB impact.
-            // The Super Admin app reads different tables and never touches user_metadata flags.
-            const onboardingDone = metadata.onboarding_completed === true;
+            // Use is_first_login flag from the users table via API.
+            let isFirstLogin = true;
+            try {
+                const profileRes = await fetch("/api/profile");
+                if (profileRes.ok) {
+                    const { data } = await profileRes.json();
+                    if (data && typeof data.isFirstLogin === 'boolean') {
+                        isFirstLogin = data.isFirstLogin;
+                    }
+                }
+            } catch (e) {
+                console.error("Failed to fetch profile", e);
+            }
 
-            if (!onboardingDone) {
+            if (isFirstLogin) {
                 // New user or incomplete onboarding — send to intro
                 router.replace("/onboarding/intro");
             } else {

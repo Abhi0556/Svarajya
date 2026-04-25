@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
@@ -24,6 +24,30 @@ export default function OccupationStep() {
     const [selected, setSelected] = useState(() => stored.occupationType || "");
     const [otherText, setOtherText] = useState(() => stored.occupationOther || "");
     const [error, setError] = useState("");
+    const [isLoading, setIsLoading] = useState(true);
+
+    // Fetch existing user data from database
+    useEffect(() => {
+        const fetchUserData = async () => {
+            try {
+                const response = await fetch('/api/profile');
+                if (!response.ok) return;
+
+                const json = await response.json();
+                const profile = json?.data;
+                if (profile?.occupationType) {
+                    setSelected(profile.occupationType);
+                    setOtherText(profile.occupationOther || "");
+                    OnboardingStore.set({ occupationType: profile.occupationType, occupationOther: profile.occupationOther || "" }, { sync: false });
+                }
+            } catch (error) {
+                console.error('Failed to fetch user profile:', error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchUserData();
+    }, []);
 
     const handleContinue = () => {
         if (!selected) { setError("Please choose one option."); return; }
@@ -33,9 +57,40 @@ export default function OccupationStep() {
         router.push("/onboarding/contact-info");
     };
 
+    if (isLoading) {
+        return (
+            <div className="flex flex-col min-h-screen p-6 relative">
+                <div className="absolute inset-0 bg-linear-to-b from-slate-950 via-[#0a1628] to-slate-950 pointer-events-none" />
+                <div className="relative z-10 flex flex-col min-h-screen">
+                    <div className="flex items-center gap-2 pt-10 mb-2">
+                        <div className="w-9 h-9 rounded-xl bg-white/6 animate-pulse" />
+                        <div className="h-3 w-24 bg-white/10 rounded animate-pulse" />
+                    </div>
+                    <div className="h-1 w-full bg-white/10 rounded-full mt-3 animate-pulse" />
+                    <div className="flex-1 flex flex-col justify-center space-y-8 mt-12">
+                        <div className="flex justify-center">
+                            <div className="w-48 h-24 bg-white/6 rounded-xl animate-pulse" />
+                        </div>
+                        <div className="space-y-5">
+                            <div className="space-y-2">
+                                <div className="h-4 w-48 bg-white/10 rounded animate-pulse" />
+                                <div className="h-3 w-32 bg-white/5 rounded animate-pulse" />
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                                {[1, 2, 3, 4].map(i => (
+                                    <div key={i} className="h-8 w-24 bg-white/6 rounded-full animate-pulse" />
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="flex flex-col min-h-screen p-6 relative">
-            <div className="absolute inset-0 bg-gradient-to-b from-slate-950 via-[#0a1628] to-slate-950 pointer-events-none" />
+            <div className="absolute inset-0 bg-linear-to-b from-slate-950 via-[#0a1628] to-slate-950 pointer-events-none" />
             <div className="relative z-10 flex flex-col min-h-screen">
                 {/* Back + step */}
                 <div className="flex items-center gap-2 pt-10 mb-2">

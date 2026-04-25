@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
 import { userService } from '@/lib/services/userService';
 import { withAuth, getAuthContext, AuthLevel } from '@/lib/middleware/auth.middleware';
 import { withErrorHandler } from '@/lib/middleware/error.middleware';
@@ -27,32 +26,34 @@ async function getHandler(request: NextRequest): Promise<NextResponse> {
   }
 
   try {
-    const user = await userService.findById(authContext.userId);
+    const user = await userService.getUserWithProfile(authContext.userId);
 
     if (!user) {
-      return errorResponse(
-        ErrorCodes.NOT_FOUND,
-        'User profile not found',
-        StatusCodes.NOT_FOUND
-      );
+      return successResponse({ isFirstLogin: true } as any);
     }
 
     const userAny: any = user;
+    const phoneValue = userAny.phone ?? userAny.primary_mobile ?? userAny.primaryMobile ?? null;
+    const isMobileVerified = userAny.is_mobile_verified ?? userAny.isMobileVerified ?? !!phoneValue;
     const response: UserResponse = {
       id: user.id,
       email: user.email,
-      phone: userAny.phone ?? userAny.primary_mobile ?? userAny.primaryMobile ?? null,
-      name: user.name,
-      dob: user.dob?.toISOString() || null,
-      gender: user.gender,
-      maritalStatus: user.maritalStatus,
-      occupationType: user.occupationType,
-      employerCompany: user.employerCompany,
-      profileType: user.profileType,
-      status: user.status,
-      language: user.language,
-      createdAt: user.createdAt.toISOString(),
-      updatedAt: user.updatedAt.toISOString(),
+      phone: phoneValue,
+      mobile: phoneValue,
+      name: userAny.name,
+      dob: userAny.dob?.toISOString() || null,
+      gender: userAny.gender,
+      maritalStatus: userAny.maritalStatus,
+      occupationType: userAny.occupationType,
+      employerCompany: userAny.employerCompany,
+      profileType: userAny.profileType,
+      status: userAny.status,
+      language: userAny.language,
+      createdAt: userAny.createdAt.toISOString(),
+      updatedAt: userAny.updatedAt.toISOString(),
+      isFirstLogin: userAny.is_first_login ?? true,
+      isMobileVerified,
+      familyMembers: userAny.familyMembers || [],
     };
 
     return successResponse(response);
@@ -80,7 +81,7 @@ async function postHandler(request: NextRequest): Promise<NextResponse> {
     const data: any = await request.json();
 
     // Validate required fields
-    if (!data.name) {
+    if (!data.name && typeof data.isFirstLogin !== 'boolean') {
       return errorResponse(
         ErrorCodes.VALIDATION_ERROR,
         'Name is required',
@@ -92,7 +93,6 @@ async function postHandler(request: NextRequest): Promise<NextResponse> {
     // Update user profile
     // Prevent updating mobile/email after verification in backend
     const patch: any = {
-      name: data.name,
       dob: data.dob ? new Date(data.dob) : undefined,
       gender: data.gender,
       maritalStatus: data.maritalStatus,
@@ -100,44 +100,76 @@ async function postHandler(request: NextRequest): Promise<NextResponse> {
       employerCompany: data.employerCompany,
       language: data.language,
     };
+    if (data.name !== undefined) patch.name = data.name;
+    if (typeof data.isFirstLogin === 'boolean') patch.is_first_login = data.isFirstLogin;
 
     // Only allow email/mobile change if not verified
-    const existing = await userService.findById(authContext.userId);
-    if (!existing) {
-      return errorResponse(ErrorCodes.NOT_FOUND, 'User not found', StatusCodes.NOT_FOUND);
+    let user = await userService.findById(authContext.userId);
+    if (!user) {
+      const createData: any = {
+        id: authContext.userId,
+        email: authContext.email,
+        name: data.name,
+        status: 'PENDING_VERIFICATION',
+        profileType: 'INDIVIDUAL_SALARIED',
+      };
+
+      if (data.phone) {
+        createData.phone = data.phone;
+      }
+      if (data.dob) {
+        createData.dob = new Date(data.dob);
+      }
+      if (data.gender) {
+        createData.gender = data.gender;
+      }
+      if (data.maritalStatus) {
+        createData.maritalStatus = data.maritalStatus;
+      }
+      if (data.occupationType) {
+        createData.occupationType = data.occupationType;
+      }
+      if (data.language) {
+        createData.language = data.language;
+      }
+      if (typeof data.isFirstLogin === 'boolean') {
+        createData.is_first_login = data.isFirstLogin;
+      }
+
+      user = await userService.create(createData);
+    } else {
+      const existingAny: any = user;
+      const isEmailVerified = existingAny.is_email_verified ?? existingAny.isEmailVerified ?? false;
+      const isMobileVerified = existingAny.is_mobile_verified ?? existingAny.isMobileVerified ?? false;
+
+      if (data.email && !isEmailVerified) {
+        patch.email = data.email;
+      }
+
+      if (data.phone && !isMobileVerified) {
+        patch.phone = data.phone;
+      }
+
+      user = await userService.update(authContext.userId, patch);
     }
-
-    // Some environments may have different field naming (snake_case vs camelCase)
-    const existingAny: any = existing;
-    const isEmailVerified = existingAny.is_email_verified ?? existingAny.isEmailVerified ?? false;
-    const isMobileVerified = existingAny.is_mobile_verified ?? existingAny.isMobileVerified ?? false;
-
-    if (data.email && !isEmailVerified) {
-      patch.email = data.email;
-    }
-
-    if (data.phone && !isMobileVerified) {
-      patch.mobile = data.phone;
-    }
-
-    const user = await userService.update(authContext.userId, patch);
 
     const userAny: any = user;
     const response: UserResponse = {
       id: user.id,
       email: user.email,
       phone: userAny.phone ?? null,
-      name: user.name,
-      dob: user.dob?.toISOString() || null,
-      gender: user.gender,
-      maritalStatus: user.maritalStatus,
-      occupationType: user.occupationType,
-      employerCompany: user.employerCompany,
-      profileType: user.profileType,
-      status: user.status,
-      language: user.language,
-      createdAt: user.createdAt.toISOString(),
-      updatedAt: user.updatedAt.toISOString(),
+      name: userAny.name,
+      dob: userAny.dob?.toISOString() || null,
+      gender: userAny.gender,
+      maritalStatus: userAny.maritalStatus,
+      occupationType: userAny.occupationType,
+      employerCompany: userAny.employerCompany,
+      profileType: userAny.profileType,
+      status: userAny.status,
+      language: userAny.language,
+      createdAt: userAny.createdAt.toISOString(),
+      updatedAt: userAny.updatedAt.toISOString(),
+      isFirstLogin: userAny.is_first_login ?? true,
     };
 
     return successResponse(response, StatusCodes.CREATED, 'Profile updated');

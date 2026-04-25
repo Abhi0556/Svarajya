@@ -1,10 +1,12 @@
 ﻿"use client";
 
-import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { OnboardingStore } from "@/lib/stores/onboardingStore";
+import { useAuth } from "@/components/providers/AuthProvider";
+import { createClient } from "@/lib/supabase/client";
 
 function ProgressBar({ step }: { step: number }) {
     return (
@@ -22,9 +24,50 @@ function ProgressBar({ step }: { step: number }) {
 
 export default function NameStep() {
     const router = useRouter();
-    const [name, setName] = useState(() => OnboardingStore.get().fullName || "");
+    const { user, isLoading: authLoading } = useAuth();
+    const [name, setName] = useState("");
     const [placed, setPlaced] = useState(false);
     const [error, setError] = useState("");
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        const loadName = async () => {
+            if (authLoading) return;
+            setIsLoading(true);
+
+            try {
+                const supabase = createClient();
+                const [{ data: authData }, profileRes] = await Promise.all([
+                    supabase.auth.getUser(),
+                    fetch('/api/profile'),
+                ]);
+
+                const authName = authData.user?.user_metadata?.full_name || authData.user?.user_metadata?.name;
+                const profileJson = profileRes.ok ? await profileRes.json() : null;
+                const profileData = profileJson?.data;
+
+                const storeData = OnboardingStore.get();
+                const prismaName = profileData?.name || storeData.fullName;
+                const initialName = prismaName || authName || (authData.user?.email?.split('@')[0] ?? '');
+
+                if (initialName) {
+                    setName(initialName);
+                }
+
+                if (prismaName) {
+                    await OnboardingStore.set({ fullName: prismaName }, { sync: false });
+                } else if (authName) {
+                    await OnboardingStore.set({ fullName: authName }, { sync: false });
+                }
+            } catch (error) {
+                console.error('Failed to load name:', error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        loadName();
+    }, [user, authLoading]);
 
     const handleContinue = () => {
         const trimmed = name.trim();
@@ -37,6 +80,17 @@ export default function NameStep() {
         setPlaced(true);
         setTimeout(() => router.push("/onboarding/dob"), 1200);
     };
+
+    if (isLoading) {
+        return (
+            <div className="flex flex-col min-h-screen p-6 relative">
+                <div className="absolute inset-0 bg-gradient-to-b from-slate-950 via-[#0a1628] to-slate-950 pointer-events-none" />
+                <div className="relative z-10 flex items-center justify-center min-h-screen">
+                    <div className="text-amber-400">Loading...</div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="flex flex-col min-h-screen p-6 relative">
@@ -52,20 +106,16 @@ export default function NameStep() {
                 <ProgressBar step={1} />
 
                 <div className="flex-1 flex flex-col justify-center space-y-8">
-                    {/* Palace signboard visual reward */}
                     <div className="flex justify-center">
                         <div className="relative">
                             <svg width="200" height="80" viewBox="0 0 200 80">
-                                {/* Signboard frame */}
                                 <rect x="10" y="20" width="180" height="44" rx="4" fill="rgba(251,191,36,0.08)" stroke="rgba(251,191,36,0.3)" strokeWidth="1.5" />
-                                {/* Hanging chains */}
                                 <line x1="40" y1="20" x2="40" y2="8" stroke="rgba(251,191,36,0.4)" strokeWidth="1" />
                                 <line x1="160" y1="20" x2="160" y2="8" stroke="rgba(251,191,36,0.4)" strokeWidth="1" />
                                 <circle cx="40" cy="6" r="3" fill="rgba(251,191,36,0.5)" />
                                 <circle cx="160" cy="6" r="3" fill="rgba(251,191,36,0.5)" />
                             </svg>
 
-                            {/* Name on signboard */}
                             <AnimatePresence>
                                 {placed && name && (
                                     <motion.div
@@ -112,7 +162,7 @@ export default function NameStep() {
                                 animate={{ opacity: 1 }}
                                 className="text-emerald-400 text-sm text-center"
                             >
-                                âœ“ Nameplate placed. Rajya begins.
+                                ✓ Nameplate placed. Rajya begins.
                             </motion.p>
                         )}
                     </div>
@@ -125,22 +175,6 @@ export default function NameStep() {
                         className="w-full bg-amber-400 text-black font-semibold py-4 rounded-xl text-sm hover:bg-amber-300 transition-colors disabled:opacity-60"
                     >
                         Place the Nameplate
-                    </button>
-                    <button
-                        onClick={async () => {
-                            const res = await fetch("/api/profile", { cache: "no-store" });
-                            if (res.ok) {
-                                const profile = await res.json();
-                                if (profile?.fullName) {
-                                    window.location.href = "/onboarding/firstwin?returning=true";
-                                    return;
-                                }
-                            }
-                            setError("No existing Rajya found in the database. Please enter your name to start.");
-                        }}
-                        className="w-full text-xs text-white/30 hover:text-amber-400/60 transition-colors py-2"
-                    >
-                        I already have a Rajya â†’
                     </button>
                 </div>
             </div>

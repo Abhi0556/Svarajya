@@ -1,10 +1,11 @@
 ﻿"use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { MessageSquare, ArrowLeft } from "lucide-react";
 import { OnboardingStore } from "@/lib/stores/onboardingStore";
+import { createClient } from "@/lib/supabase/client";
 import { validateControlledEmail, validateIndianMobile } from "@/lib/validators/contactValidator";
 
 const MOCK_OTP = "1234";
@@ -28,6 +29,51 @@ export default function ContactStep() {
     const [otpInput, setOtpInput] = useState("");
     const [error, setError] = useState("");
     const [unlocked, setUnlocked] = useState(false);
+    const [isReadOnly, setIsReadOnly] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isSaving, setIsSaving] = useState(false);
+
+    // Fetch existing user and auth data from Supabase + Prisma profile
+    useEffect(() => {
+        const fetchUserData = async () => {
+            try {
+                const supabase = createClient();
+                const authResponse = await supabase.auth.getUser();
+                const profileResponse = await fetch('/api/profile');
+
+                const authUser = authResponse.data.user;
+                const profileJson = profileResponse.ok ? await profileResponse.json() : null;
+                const profile = profileJson?.data;
+
+                const authEmail = authUser?.email || profile?.email || "";
+                const profileMobile = profile?.phone || "";
+                const profileWhatsapp = profile?.whatsappEnabled ?? false;
+                const profileEmail = authEmail;
+                const mobileVerified = profile?.isMobileVerified ?? !!profileMobile;
+
+                setEmail(profileEmail);
+                setWhatsapp(profileWhatsapp);
+                setMobile(profileMobile);
+
+                if (profileMobile && mobileVerified) {
+                    setOtpState('verified');
+                    setUnlocked(true);
+                    setIsReadOnly(true);
+                }
+
+                OnboardingStore.set({
+                    email: profileEmail,
+                    mobile: profileMobile,
+                    whatsappEnabled: profileWhatsapp,
+                }, { sync: false });
+            } catch (error) {
+                console.error('Failed to fetch user profile:', error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchUserData();
+    }, []);
 
     const handleSendOtp = async () => {
         const mobileResult = validateIndianMobile(mobile);
@@ -73,17 +119,68 @@ export default function ContactStep() {
         setError("");
         setOtpState("verified");
         setUnlocked(true);
+        setIsReadOnly(true);
         OnboardingStore.set({
             mobile: mobileResult.normalized,
             email: normalizedEmail.normalized || "",
             whatsappEnabled: whatsapp,
         });
-        setTimeout(() => router.push("/onboarding/firstwin"), 1200);
     };
+
+    const handleSaveContinue = async () => {
+        setIsSaving(true);
+        try {
+            const mobileResult = validateIndianMobile(mobile);
+            const normalizedEmail = email.trim()
+                ? validateControlledEmail(email)
+                : { valid: true, normalized: "" };
+            
+            OnboardingStore.set({
+                mobile: mobileResult.normalized,
+                email: normalizedEmail.normalized || "",
+                whatsappEnabled: whatsapp,
+            });
+            
+            router.push("/onboarding/firstwin");
+        } catch (error) {
+            console.error('Error saving contact info:', error);
+            setError('Failed to save contact information. Please try again.');
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    if (isLoading) {
+        return (
+            <div className="flex flex-col min-h-screen p-6 relative">
+                <div className="absolute inset-0 bg-linear-to-b from-slate-950 via-[#0a1628] to-slate-950 pointer-events-none" />
+                <div className="relative z-10 flex flex-col min-h-screen">
+                    <div className="flex items-center gap-2 pt-10 mb-2">
+                        <div className="w-9 h-9 rounded-xl bg-white/6 animate-pulse" />
+                        <div className="h-3 w-24 bg-white/10 rounded animate-pulse" />
+                    </div>
+                    <div className="h-1 w-full bg-white/10 rounded-full mt-3 animate-pulse" />
+                    <div className="flex-1 flex flex-col justify-center space-y-6 mt-12">
+                        <div className="flex justify-center">
+                            <div className="w-44 h-20 bg-white/6 rounded-xl animate-pulse" />
+                        </div>
+                        <div className="space-y-4">
+                            <div className="h-4 w-32 bg-white/10 rounded animate-pulse" />
+                            <div className="h-3 w-48 bg-white/5 rounded animate-pulse" />
+                        </div>
+                        <div className="space-y-3">
+                            <div className="h-4 w-24 bg-white/10 rounded animate-pulse" />
+                            <div className="h-12 w-full bg-white/6 rounded-xl animate-pulse" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="flex flex-col min-h-screen p-6 relative">
-            <div className="absolute inset-0 bg-gradient-to-b from-slate-950 via-[#0a1628] to-slate-950 pointer-events-none" />
+            <div className="absolute inset-0 bg-linear-to-b from-slate-950 via-[#0a1628] to-slate-950 pointer-events-none" />
             <div className="relative z-10 flex flex-col min-h-screen">
                 {/* Back + step */}
                 <div className="flex items-center gap-2 pt-10 mb-2">
@@ -117,25 +214,30 @@ export default function ContactStep() {
 
                         {/* Mobile */}
                         <div className="space-y-2">
-                            <label className="text-xs text-white/50 uppercase tracking-wider">Mobile number</label>
+                            <div className="flex items-center justify-between gap-2">
+                                <label className="text-xs text-white/50 uppercase tracking-wider">Mobile number</label>
+                                {isReadOnly && (
+                                    <span className="text-emerald-400 text-[11px] uppercase tracking-[0.15em]">Verified</span>
+                                )}
+                            </div>
                             <div className="flex gap-2">
                                 <div className="bg-white/6 border border-white/15 rounded-xl px-3 flex items-center text-white/55 text-sm shrink-0">+91</div>
                                 <input
                                     type="tel"
                                     value={mobile}
-                                    onChange={e => { setMobile(e.target.value.replace(/\D/g, "").slice(0, 10)); setError(""); }}
+                                    onChange={e => { if (!isReadOnly && otpState === 'none') { setMobile(e.target.value.replace(/\D/g, "").slice(0, 10)); setError(""); } }}
                                     placeholder="10-digit number"
                                     maxLength={10}
                                     inputMode="numeric"
                                     pattern="[0-9]{10}"
-                                    className="flex-1 bg-white/6 border border-white/15 rounded-xl px-4 py-3 text-white placeholder-white/25 focus:outline-none focus:border-amber-400/60 transition-colors"
-                                    disabled={otpState !== "none"}
+                                    className="flex-1 bg-white/6 border border-white/15 rounded-xl px-4 py-3 text-white placeholder-white/25 focus:outline-none focus:border-amber-400/60 transition-colors disabled:cursor-not-allowed disabled:opacity-60"
+                                    disabled={otpState !== "none" || isReadOnly}
                                 />
                             </div>
                         </div>
 
                         {/* OTP Area */}
-                        {otpState === "none" && (
+                        {otpState === "none" && !isReadOnly && (
                             <button onClick={handleSendOtp} className="w-full bg-white/8 border border-white/15 text-white/70 py-3 rounded-xl text-sm hover:bg-white/12 transition-colors">
                                 Send OTP to mobile
                             </button>
@@ -167,11 +269,23 @@ export default function ContactStep() {
 
                         {otpState === "verified" && (
                             <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center text-emerald-400 text-sm">
-                                âœ“ Mobile verified. Gate unlocked.
+                                ✓ Mobile verified. Gate unlocked.
                             </motion.p>
                         )}
 
                         {error && <p className="text-red-400 text-xs">{error}</p>}
+
+                        {otpState === "verified" && (
+                            <motion.button
+                                initial={{ opacity: 0, y: 8 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                onClick={handleSaveContinue}
+                                disabled={isSaving}
+                                className="w-full bg-amber-400 text-black font-semibold py-3 rounded-xl text-sm hover:bg-amber-300 transition-colors disabled:opacity-60 mt-4"
+                            >
+                                {isSaving ? "Saving..." : "Save & Continue"}
+                            </motion.button>
+                        )}
 
                         {/* Email (optional) */}
                         <div className="space-y-2">
@@ -181,7 +295,8 @@ export default function ContactStep() {
                                 value={email}
                                 onChange={e => { setEmail(e.target.value.trim().toLowerCase()); setError(""); }}
                                 placeholder="yourname@email.com"
-                                className="w-full bg-white/6 border border-white/15 rounded-xl px-4 py-3 text-white placeholder-white/25 focus:outline-none focus:border-amber-400/60 transition-colors text-sm"
+                                className="w-full bg-white/6 border border-white/15 rounded-xl px-4 py-3 text-white placeholder-white/25 focus:outline-none focus:border-amber-400/60 transition-colors text-sm disabled:cursor-not-allowed disabled:opacity-70"
+                                disabled
                             />
                         </div>
 

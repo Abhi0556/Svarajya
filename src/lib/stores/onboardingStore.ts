@@ -1,5 +1,4 @@
 // Shared in-memory store for onboarding data across steps.
-// In Phase 2 this will be replaced by writing to Supabase on completion.
 
 export type OnboardingData = {
     fullName: string;
@@ -28,26 +27,37 @@ type FamilyMember = OnboardingData["familyMembers"][number];
 
 export const OnboardingStore = {
     get: () => ({ ..._data }),
-    set: async (partial: Partial<OnboardingData>) => {
+    set: async (
+        partial: Partial<OnboardingData>,
+        options: { sync?: boolean } = { sync: true }
+    ) => {
         _data = { ..._data, ...partial };
-        // Sync to API in background
-        if (typeof window !== 'undefined') {
-            try {
-                // Map local 'fullName' to 'name' which Prisma and the API strictly require
-                const payload = {
-                    ..._data,
-                    name: _data.fullName 
-                };
+        if (typeof window === 'undefined' || options.sync === false) {
+            return;
+        }
 
-                await fetch('/api/profile', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-            } catch (err: any) {
-                if (err.name === 'AbortError') return; // Expected on fast navigation
-                console.error("Failed to sync profile", err);
+        try {
+            // Map local 'fullName' to 'name' which Prisma and the API strictly require
+            const payload: any = {
+                ..._data,
+                name: _data.fullName ?? (_data as any).name,
+            };
+            delete payload.fullName;
+
+            // Map mobile to phone for API
+            if (_data.mobile !== undefined) {
+                payload.phone = _data.mobile;
             }
+            delete payload.mobile;
+
+            await fetch('/api/profile', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+        } catch (err: any) {
+            if (err.name === 'AbortError') return; // Expected on fast navigation
+            console.error('Failed to sync profile', err);
         }
     },
     addFamilyMember: async (member: FamilyMember) => {
@@ -74,8 +84,16 @@ export const OnboardingStore = {
                 const res = await fetch('/api/profile');
                 if (res.ok) {
                     const dbProfile = await res.json();
-                    if (dbProfile) {
-                        _data = { ..._data, ...dbProfile };
+                    if (dbProfile && dbProfile.data) {
+                        // CRITICAL Fix: Map 'name' from API to 'fullName' in store
+                        const profileData = dbProfile.data;
+                        const normalizedProfile: any = {
+                            ..._data,
+                            ...profileData,
+                            fullName: profileData.name || _data.fullName,
+                        };
+                        delete normalizedProfile.name;
+                        _data = normalizedProfile;
                     }
                 }
             } catch (err) {

@@ -39,6 +39,10 @@ export interface UserResponse {
   language: string;
   createdAt: string;
   updatedAt: string;
+  isFirstLogin: boolean;
+  isMobileVerified?: boolean;
+  mobile?: string | null;
+  familyMembers?: any[];
 }
 
 export interface CreateProfileRequest {
