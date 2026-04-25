@@ -54,6 +54,7 @@ async function getHandler(request: NextRequest): Promise<NextResponse> {
       isFirstLogin: userAny.is_first_login ?? true,
       isMobileVerified,
       familyMembers: userAny.familyMembers || [],
+      education: userAny.education || [],
     };
 
     return successResponse(response);
@@ -94,7 +95,8 @@ async function postHandler(request: NextRequest): Promise<NextResponse> {
                           data.language !== undefined ||
                           data.phone !== undefined ||
                           data.email !== undefined ||
-                          (data.familyMembers !== undefined && Array.isArray(data.familyMembers));
+                          (data.familyMembers !== undefined && Array.isArray(data.familyMembers)) ||
+                          (data.education !== undefined && Array.isArray(data.education));
 
     if (!hasValidFields) {
       return errorResponse(
@@ -115,6 +117,7 @@ async function postHandler(request: NextRequest): Promise<NextResponse> {
       employerCompany: data.employerCompany,
       language: data.language,
       familyMembers: data.familyMembers,
+      education: data.education,
     };
     if (data.name !== undefined) patch.name = data.name;
     if (typeof data.isFirstLogin === 'boolean') patch.is_first_login = data.isFirstLogin;
@@ -161,6 +164,17 @@ async function postHandler(request: NextRequest): Promise<NextResponse> {
           })),
         };
       }
+      if (data.education && Array.isArray(data.education)) {
+        createData.education = {
+          create: data.education.map((edu: any) => ({
+            degree: edu.degree,
+            institute: edu.institution || edu.institute,
+            yearCompleted: edu.year ? parseInt(edu.year) : null,
+            specialization: edu.specialization || null,
+            linkedLoanId: edu.hasLoan ? "has_loan" : null,
+          })),
+        };
+      }
       if (typeof data.isFirstLogin === 'boolean') {
         createData.is_first_login = data.isFirstLogin;
       }
@@ -190,6 +204,20 @@ async function postHandler(request: NextRequest): Promise<NextResponse> {
             isDependent: member.dependent ?? member.isDependent ?? false,
             nomineeEligible: member.nomineeEligible ?? false,
             accessLevel: member.accessRole || member.accessLevel || 'read',
+          })),
+        };
+      }
+
+      // Handle education update - replace all existing education records
+      if (data.education && Array.isArray(data.education)) {
+        patch.education = {
+          deleteMany: {},
+          create: data.education.map((edu: any) => ({
+            degree: edu.degree,
+            institute: edu.institution || edu.institute,
+            yearCompleted: edu.year ? parseInt(edu.year) : null,
+            specialization: edu.specialization || null,
+            linkedLoanId: edu.hasLoan ? "has_loan" : null,
           })),
         };
       }

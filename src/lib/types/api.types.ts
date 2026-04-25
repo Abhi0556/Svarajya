@@ -43,6 +43,7 @@ export interface UserResponse {
   isMobileVerified?: boolean;
   mobile?: string | null;
   familyMembers?: any[];
+  education?: any[];
 }
 
 export interface CreateProfileRequest {

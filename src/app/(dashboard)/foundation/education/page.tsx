@@ -1,12 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { BookOpen, ShieldAlert, CheckCircle2, ArrowLeft, Upload, Plus, GraduationCap } from "lucide-react";
 import { FileUploader } from "@/components/vault/FileUploader";
 import { VideoTutorialPlaceholder } from "@/components/ui/VideoTutorialPlaceholder";
-import { OnboardingStore } from "@/lib/onboardingStore";
+import { OnboardingStore } from "@/lib/stores/onboardingStore";
+import { Vault } from "@/lib/vault";
+import { useToast } from "@/components/providers/ToastProvider";
 
 interface EducationEntry {
     degree: string;
@@ -25,18 +27,53 @@ const DEGREE_OPTIONS = [
     "Professional (MBBS / MD)", "Professional (LLB / LLM)", "Other",
 ];
 
-import { Vault } from "@/lib/vault";
-
 export default function EducationPage() {
     const router = useRouter();
     const [entries, setEntries] = useState<EducationEntry[]>([]);
-    const [showForm, setShowForm] = useState(entries.length === 0);
+    const [showForm, setShowForm] = useState(false);
     const [degree, setDegree] = useState("");
     const [institution, setInstitution] = useState("");
     const [year, setYear] = useState("");
     const [specialization, setSpecialization] = useState("");
     const [hasLoan, setHasLoan] = useState(false);
     const [uploadedCerts, setUploadedCerts] = useState<string[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const toast = useToast();
+
+    useEffect(() => {
+        const fetchEducation = async () => {
+            setIsLoading(true);
+            try {
+                const response = await fetch('/api/profile');
+                if (response.ok) {
+                    const json = await response.json();
+                    const profileData = json?.data;
+                    if (profileData?.education && profileData.education.length > 0) {
+                        const loadedEntries = profileData.education.map((edu: any) => ({
+                            degree: edu.degree || "",
+                            institution: edu.institute || edu.institution || "",
+                            year: edu.yearCompleted ? edu.yearCompleted.toString() : "",
+                            specialization: edu.specialization || "",
+                            hasLoan: edu.linkedLoanId === "has_loan",
+                            certificateId: undefined, // Update logic if cert IDs are tracked
+                        }));
+                        setEntries(loadedEntries);
+                        setShowForm(false);
+                    } else {
+                        setShowForm(true);
+                    }
+                } else {
+                    setShowForm(true);
+                }
+            } catch (error) {
+                console.error("Failed to load education:", error);
+                setShowForm(true);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchEducation();
+    }, []);
 
     const handleAddEntry = () => {
         if (!degree || !institution) return;
@@ -45,18 +82,18 @@ export default function EducationPage() {
             const certYear = parseInt(year);
             const currentYear = new Date().getFullYear();
             if (certYear > currentYear) {
-                alert("Certificate year cannot be in the future.");
+                toast("Certificate year cannot be in the future.", "error");
                 return;
             }
             if (certYear < 1900) {
-                alert("Certificate year seems invalid.");
+                toast("Certificate year seems invalid.", "error");
                 return;
             }
             const userDobStr = OnboardingStore.get().dob;
             if (userDobStr) {
                 const birthYear = new Date(userDobStr).getFullYear();
                 if (certYear <= birthYear) {
-                    alert("Certificate year must be after your birth year.");
+                    toast("Certificate year must be after your birth year.", "error");
                     return;
                 }
             }
@@ -79,16 +116,45 @@ export default function EducationPage() {
         if (url) {
             window.open(url, '_blank');
         } else {
-            alert('File not found in your secure local vault.');
+            toast('File not found in your secure local vault.', "error");
         }
     };
 
-    const handleFinish = () => {
-        console.log("Education saved:", entries, "Certificates:", uploadedCerts);
-        router.push("/rajya");
+    const handleFinish = async () => {
+        try {
+            const response = await fetch('/api/profile', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    education: entries,
+                }),
+            });
+            
+            if (!response.ok) throw new Error("Failed to save education");
+            
+            toast("Education saved successfully", "success");
+            router.push("/rajya");
+        } catch (error) {
+            console.error("Save error:", error);
+            toast("Failed to save education. Please try again.", "error");
+        }
     };
 
     const anyLoan = entries.some(e => e.hasLoan);
+
+    if (isLoading) {
+        return (
+            <div className="flex flex-col min-h-screen relative p-6">
+                <div className="absolute inset-0 bg-gradient-to-b from-slate-950 via-[#0a1628] to-slate-950 pointer-events-none" />
+                <div className="relative z-10 flex items-center justify-center min-h-screen">
+                    <div className="text-amber-400 text-center">
+                        <div className="w-8 h-8 border-2 border-amber-400 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                        <p className="text-white/60">Loading your qualifications...</p>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="flex flex-col min-h-screen relative p-6 pb-24">
@@ -120,10 +186,17 @@ export default function EducationPage() {
                 <div className="space-y-3 mb-5">
                     <p className="text-[10px] text-white/30 uppercase tracking-wider">Your Qualifications ({entries.length})</p>
                     {entries.map((e, i) => (
-                        <div key={i} className="bg-white/5 border border-white/10 rounded-xl p-4">
+                        <div key={i} className="bg-white/5 border border-white/10 rounded-xl p-4 relative group">
+                            <button
+                                onClick={() => setEntries(entries.filter((_, index) => index !== i))}
+                                className="absolute top-3 right-3 text-white/30 hover:text-red-400 transition-colors"
+                                title="Remove qualification"
+                            >
+                                ✕
+                            </button>
                             <div className="flex items-center gap-2 mb-1">
                                 <GraduationCap className="w-4 h-4 text-[var(--color-rajya-accent)]" />
-                                <p className="text-sm font-medium text-[var(--color-rajya-text)]">{e.degree}</p>
+                                <p className="text-sm font-medium text-[var(--color-rajya-text)] pr-6">{e.degree}</p>
                             </div>
                             <p className="text-xs text-[var(--color-rajya-muted)]">{e.institution}{e.year ? ` • ${e.year}` : ""}</p>
                             {e.specialization && <p className="text-[10px] text-[var(--color-rajya-muted)]/60 mt-0.5">{e.specialization}</p>}
