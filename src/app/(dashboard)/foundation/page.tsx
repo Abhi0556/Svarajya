@@ -14,6 +14,31 @@ const STEPS = [
     { id: "education", icon: <GraduationCap className="w-5 h-5" />, label: "Education & Qualifications", desc: "Your background and any education loans", route: "/foundation/education" },
 ];
 
+// Helper function to calculate life phase based on DOB
+function getLifePhase(dob: string | null): string {
+    if (!dob) return "Nirmaan"; // Default fallback
+
+    try {
+        const birthDate = new Date(dob);
+        const today = new Date();
+        let age = today.getFullYear() - birthDate.getFullYear();
+
+        // Adjust age if birthday hasn't occurred this year
+        const monthDiff = today.getMonth() - birthDate.getMonth();
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+            age--;
+        }
+
+        if (age < 25) return "Yuva";
+        if (age >= 25 && age < 40) return "Nirmaan";
+        if (age >= 40 && age < 60) return "Sthirta";
+        return "Parampara";
+    } catch (error) {
+        console.error("Error calculating life phase:", error);
+        return "Nirmaan"; // Fallback on error
+    }
+}
+
 export default function FoundationHub() {
     const router = useRouter();
     const data = OnboardingStore.get();
@@ -231,7 +256,7 @@ export default function FoundationHub() {
                         >
                             <p className="font-semibold text-white truncate">{profile?.name || data.fullName || "Your Name"}</p>
                             <p className="text-xs text-white/40 mt-0.5">
-                                {profile?.occupationType || data.occupationType || "Occupation"} · {profile?.lifePhase || data.lifePhase || "Nirmaan"} phase
+                                {profile?.occupationType || data.occupationType || "Occupation"} · {getLifePhase(profile?.dob || data.dob)} phase
                             </p>
                             {(profile?.phone || data.mobile) && (
                                 <div className="flex items-center gap-2">
