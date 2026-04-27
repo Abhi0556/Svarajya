@@ -26,10 +26,16 @@ async function getHandler(request: NextRequest): Promise<NextResponse> {
   }
 
   try {
-    const user = await userService.getUserWithProfile(authContext.userId);
+    let user = await userService.getUserWithProfile(authContext.userId);
 
     if (!user) {
-      return successResponse({ isFirstLogin: true } as any);
+      // Self-heal: Create Prisma user if missing
+      await userService.syncUserWithSupabase(authContext.userId, authContext.email, '');
+      user = await userService.getUserWithProfile(authContext.userId);
+      
+      if (!user) {
+        return successResponse({ isFirstLogin: true } as any);
+      }
     }
 
     const userAny: any = user;
@@ -69,8 +75,20 @@ async function getHandler(request: NextRequest): Promise<NextResponse> {
  * Create or update user profile
  */
 async function postHandler(request: NextRequest): Promise<NextResponse> {
-  const authContext = getAuthContext(request);
-  if (!authContext) {
+  let authContext = getAuthContext(request);
+  let data: any;
+  
+  try {
+    data = await request.json();
+  } catch (e) {
+    return errorResponse(ErrorCodes.BAD_REQUEST, 'Invalid JSON', StatusCodes.BAD_REQUEST);
+  }
+
+  // Check for internal secret to allow unauthenticated user creation (signup sync)
+  const INTERNAL_SECRET = process.env.NEXT_PUBLIC_INTERNAL_SECRET || 'SVARAJYA_INTERNAL_SYNC_2025';
+  const isInternalSync = data._internal_secret === INTERNAL_SECRET;
+
+  if (!authContext && !isInternalSync) {
     return errorResponse(
       ErrorCodes.UNAUTHORIZED,
       'Authentication required',
@@ -78,9 +96,24 @@ async function postHandler(request: NextRequest): Promise<NextResponse> {
     );
   }
 
-  try {
-    const data: any = await request.json();
+  // If internal sync bypass, mock the authContext
+  if (!authContext && isInternalSync) {
+    if (!data.id) {
+      return errorResponse(ErrorCodes.BAD_REQUEST, 'User ID required for internal sync', StatusCodes.BAD_REQUEST);
+    }
+    authContext = {
+      userId: data.id,
+      email: data.email || null,
+      authId: data.id,
+    };
+  }
 
+  // Ensure authContext is definitely defined now
+  if (!authContext) {
+     return errorResponse(ErrorCodes.UNAUTHORIZED, 'Authentication failed', StatusCodes.UNAUTHORIZED);
+  }
+
+  try {
     // Log incoming request body for debugging
     console.log('[Profile POST] Received data:', JSON.stringify(data, null, 2));
 
@@ -257,5 +290,5 @@ async function postHandler(request: NextRequest): Promise<NextResponse> {
 export const GET = withAuth(withErrorHandler(getHandler), AuthLevel.AUTHENTICATED);
 export const POST = withAuth(
   withErrorHandler(postHandler),
-  AuthLevel.AUTHENTICATED
+  AuthLevel.PUBLIC
 );

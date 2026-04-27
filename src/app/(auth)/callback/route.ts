@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { userService } from '@/lib/services/userService'
 
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url)
@@ -8,7 +9,17 @@ export async function GET(request: Request) {
 
   if (code) {
     const supabase = await createClient()
-    const { error } = await supabase.auth.exchangeCodeForSession(code)
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code)
+
+    // Sync user with Prisma after successful session creation
+    if (data?.user && data.user.email) {
+      try {
+        const name = data.user.user_metadata?.full_name || '';
+        await userService.syncUserWithSupabase(data.user.id, data.user.email, name);
+      } catch (syncError) {
+        console.error('[Auth Callback] Failed to sync user to Prisma:', syncError);
+      }
+    }
 
     // If token is expired or invalid, redirect to verify-email with expired flag
     if (error) {

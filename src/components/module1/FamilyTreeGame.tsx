@@ -1,7 +1,7 @@
-import { useState } from "react";
+import React, { useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, X, User as UserIcon, ShieldAlert } from "lucide-react";
-import { OnboardingStore } from "@/lib/onboardingStore";
+import { OnboardingStore } from "@/lib/stores/onboardingStore";
 
 export type FamilyMember = {
     id: string;
@@ -24,7 +24,7 @@ interface FamilyTreeProps {
 const RELATION_OPTIONS = ["Spouse", "Child", "Parent", "Sibling", "Other"];
 const ROLE_OPTIONS = ["Viewer", "Executor", "Emergency-only", "None"];
 
-export function FamilyTreeGame({ members, onAddMember, onRemoveMember }: FamilyTreeProps) {
+export const FamilyTreeGame = React.memo(function FamilyTreeGame({ members, onAddMember, onRemoveMember }: FamilyTreeProps) {
     const [isAdding, setIsAdding] = useState(false);
     const [errorMsg, setErrorMsg] = useState("");
     const [mobileError, setMobileError] = useState("");
@@ -42,26 +42,26 @@ export function FamilyTreeGame({ members, onAddMember, onRemoveMember }: FamilyT
         accessRole: "None" as FamilyMember["accessRole"]
     });
 
-    const handleMobileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleMobileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         // Remove any non-digit characters and limit to 10 digits
         const value = e.target.value.replace(/\D/g, "").slice(0, 10);
-        setFormData({ ...formData, phone: value });
+        setFormData(prev => ({ ...prev, phone: value }));
         setMobileError("");
-    };
+    }, []);
 
-    const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleEmailChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         const value = e.target.value;
-        setFormData({ ...formData, email: value });
+        setFormData(prev => ({ ...prev, email: value }));
         setEmailError("");
-    };
+    }, []);
 
-    const handleEmailBlur = () => {
+    const handleEmailBlur = useCallback(() => {
         if (formData.email && !formData.email.endsWith("@gmail.com")) {
             setEmailError("Only @gmail.com email addresses are allowed");
         }
-    };
+    }, [formData.email]);
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = useCallback((e: React.FormEvent) => {
         e.preventDefault();
         
         if (!formData.name || !formData.dob) {
@@ -122,7 +122,7 @@ export function FamilyTreeGame({ members, onAddMember, onRemoveMember }: FamilyT
         setErrorMsg("");
         setMobileError("");
         setEmailError("");
-    };
+    }, [formData, members, onAddMember]);
 
     return (
         <div className="w-full space-y-8">
@@ -293,4 +293,4 @@ export function FamilyTreeGame({ members, onAddMember, onRemoveMember }: FamilyT
             </AnimatePresence>
         </div>
     );
-}
+});

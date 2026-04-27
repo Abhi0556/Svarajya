@@ -38,7 +38,7 @@ function AddDocumentForm() {
 
     const existingDocs = IdentityStore.getDocs();
     const profileName = OnboardingStore.get().fullName || "";
-    const isNameMismatched = nameOnDoc.trim().toLowerCase() !== profileName.trim().toLowerCase() && nameOnDoc.trim().length > 0;
+    const isNameMismatched = profileName.trim().length > 0 && nameOnDoc.trim().length > 0 && nameOnDoc.trim().toLowerCase() !== profileName.trim().toLowerCase();
 
     const handleSave = () => {
         setError("");

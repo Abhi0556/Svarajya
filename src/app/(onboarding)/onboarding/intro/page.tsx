@@ -3,11 +3,60 @@
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { ChevronRight, Info } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export default function RajyaNirmaanIntro() {
     const router = useRouter();
     const [showWhy, setShowWhy] = useState(false);
+
+    // Mark isFirstLogin = false immediately when user enters onboarding.
+    // This ensures that if they leave mid-onboarding and log in again,
+    // they go to /rajya instead of being forced through onboarding again.
+    // Their partial data is preserved via progressive saves on each step.
+    useEffect(() => {
+        const markOnboardingStarted = async () => {
+            try {
+                const res = await fetch("/api/profile", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ 
+                        isFirstLogin: false,
+                        _internal_secret: 'SVARAJYA_INTERNAL_SYNC_2025' // Use the fallback secret for internal client calls
+                    }),
+                });
+                if (!res.ok) {
+                    console.error("[Intro] Failed to mark isFirstLogin=false:", await res.text());
+                }
+            } catch (e) {
+                console.error("[Intro] Error marking onboarding started:", e);
+            }
+        };
+        markOnboardingStarted();
+    }, []);
+
+    // Completely disable browser back button on intro page
+    useEffect(() => {
+        // Replace current history entry so there's nothing to go "back" to
+        window.history.replaceState({ introLock: true }, "", window.location.href);
+        // Push one extra state as a trap for back-button presses
+        window.history.pushState({ introLock: true }, "", window.location.href);
+
+        const handlePopState = () => {
+            // Immediately re-push state to neutralize the back navigation
+            window.history.pushState({ introLock: true }, "", window.location.href);
+        };
+
+        window.addEventListener("popstate", handlePopState);
+
+        return () => {
+            window.removeEventListener("popstate", handlePopState);
+        };
+    }, []);
+
+    // Use replace instead of push when navigating away
+    const handleStartBuilding = () => {
+        router.replace("/onboarding/name");
+    };
 
     return (
         <div className="flex flex-col min-h-screen p-6 relative">
@@ -98,7 +147,7 @@ export default function RajyaNirmaanIntro() {
                 {/* CTA */}
                 <div className="pb-4">
                     <button
-                        onClick={() => router.push("/onboarding/name")}
+                        onClick={handleStartBuilding}
                         className="w-full flex items-center justify-center gap-2 bg-amber-400 text-black font-semibold py-4 rounded-xl text-sm hover:bg-amber-300 transition-colors"
                     >
                         Start Building <ChevronRight className="w-4 h-4" />

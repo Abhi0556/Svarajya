@@ -11,8 +11,8 @@ const LAST_LOGIN_KEY = "svarajya_last_login";
 
 // Only Savings and Family Security
 const PRIORITIES = [
-    { id: "save", label: "Savings", icon: "ðŸ¦", desc: "Build a safety net and grow reserves" },
-    { id: "protect", label: "Family Security", icon: "ðŸ›¡ï¸", desc: "Insurance, nominees, and legacy" },
+    { id: "save", label: "Savings", icon: "🏦", desc: "Build a safety net and grow reserves" },
+    { id: "protect", label: "Family Security", icon: "🛡️", desc: "Insurance, nominees, and legacy" },
 ];
 
 function FirstWinContent() {

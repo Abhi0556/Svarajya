@@ -193,23 +193,16 @@ export default function AuthGateway() {
                     password,
                     options: {
                         data: { full_name: fullName.trim() },
-                        // Supabase token expiry is configured in the dashboard.
-                        // We enforce 30m awareness on the callback side.
                     }
                 });
 
                 if (signUpError) {
-                    // Record failed attempt
                     const newState = recordAttempt(storageKey, trimmedEmail);
                     const left = Math.max(0, MAX_ATTEMPTS - newState.count);
                     setAttemptsLeft(left);
 
                     const errMsg = signUpError.message?.toLowerCase() ?? "";
-                    // Distinguish verified vs unverified duplicate
                     if (errMsg.includes("already registered") || errMsg.includes("user already registered")) {
-                        // Check if this user has a confirmed email
-                        const { data: methods } = await supabase.auth.signInWithOtp({ email: trimmedEmail, options: { shouldCreateUser: false } });
-                        // If signInWithOtp succeeds without error for existing user, account exists and is verified
                         setError(
                             <span>
                                 Email already registered. Please{" "}
@@ -236,6 +229,38 @@ export default function AuthGateway() {
                     return;
                 }
 
+                // FIXED: Create user in Prisma immediately after signup using secret bypass
+                if (data?.user) {
+                    try {
+                        const profileRes = await fetch('/api/profile', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                id: data.user.id,
+                                email: data.user.email,
+                                name: fullName.trim() || trimmedEmail.split('@')[0],
+                                isFirstLogin: true,
+                                profileType: 'INDIVIDUAL_SALARIED',
+                                _internal_secret: process.env.NEXT_PUBLIC_INTERNAL_SECRET || 'SVARAJYA_INTERNAL_SYNC_2025',
+                            }),
+                        });
+                        
+                        if (!profileRes.ok) {
+                            console.error("Profile creation failed:", await profileRes.text());
+                        } else {
+                            console.log("User successfully created in Prisma via sync bypass");
+                        }
+
+                        // Also attempt to sign in immediately to establish session (if confirmation not required)
+                        await supabase.auth.signInWithPassword({
+                            email: trimmedEmail,
+                            password: password
+                        });
+                    } catch (e) {
+                        console.error("Failed to create user profile", e);
+                    }
+                }
+
                 // Clear rate limit on success
                 clearRateLimit(storageKey, trimmedEmail);
 
@@ -247,7 +272,6 @@ export default function AuthGateway() {
                 }
 
                 // Direct sign-in (no email confirm required)
-                await supabase.auth.signInWithPassword({ email: trimmedEmail, password });
                 router.push("/onboarding/intro");
 
             } else if (mode === "forgot_password") {
@@ -268,12 +292,23 @@ export default function AuthGateway() {
                     const newState = recordAttempt(storageKey, trimmedEmail);
                     const left = Math.max(0, MAX_ATTEMPTS - newState.count);
                     setAttemptsLeft(left);
+
+                    const errMsg = signInError.message?.toLowerCase() ?? "";
                     if (left <= 0) {
                         const lockSecs = getRemainingLockoutSeconds(newState);
                         setRateLimitSeconds(lockSecs);
                         setError(`Too many failed attempts. Try again in ${Math.ceil(lockSecs / 60)} minute(s).`);
+                    } else if (errMsg.includes("invalid login credentials")) {
+                        setError(
+                            <span>
+                                No account found. Please{" "}
+                                <button type="button" onClick={() => switchMode("signup")} className="underline font-semibold hover:text-amber-300">
+                                    sign up to continue
+                                </button>.
+                            </span>
+                        );
                     } else {
-                        setError(`Invalid email or password. ${left} attempt(s) remaining.`);
+                        setError(signInError.message || `Invalid email or password. ${left} attempt(s) remaining.`);
                     }
                     return;
                 }

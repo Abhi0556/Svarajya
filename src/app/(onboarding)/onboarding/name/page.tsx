@@ -1,14 +1,13 @@
-﻿"use client";
+"use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { OnboardingStore } from "@/lib/stores/onboardingStore";
 import { useAuth } from "@/components/providers/AuthProvider";
-import { createClient } from "@/lib/supabase/client";
 
-function ProgressBar({ step }: { step: number }) {
+const ProgressBar = React.memo(function ProgressBar({ step }: { step: number }) {
     return (
         <div className="flex items-center gap-2 mt-3">
             {[1, 2, 3, 4, 5].map(i => (
@@ -20,7 +19,7 @@ function ProgressBar({ step }: { step: number }) {
             ))}
         </div>
     );
-}
+});
 
 export default function NameStep() {
     const router = useRouter();
@@ -29,26 +28,26 @@ export default function NameStep() {
     const [placed, setPlaced] = useState(false);
     const [error, setError] = useState("");
     const [isLoading, setIsLoading] = useState(true);
+    const [isPending, startTransition] = useTransition();
 
     useEffect(() => {
+        let isMounted = true;
         const loadName = async () => {
             if (authLoading) return;
             setIsLoading(true);
 
             try {
-                const supabase = createClient();
-                const [{ data: authData }, profileRes] = await Promise.all([
-                    supabase.auth.getUser(),
-                    fetch('/api/profile'),
-                ]);
+                // Fetch profile only if we need it
+                const profileRes = await fetch('/api/profile');
+                if (!isMounted) return;
 
-                const authName = authData.user?.user_metadata?.full_name || authData.user?.user_metadata?.name;
+                const authName = user?.user_metadata?.full_name || user?.user_metadata?.name;
                 const profileJson = profileRes.ok ? await profileRes.json() : null;
                 const profileData = profileJson?.data;
 
                 const storeData = OnboardingStore.get();
                 const prismaName = profileData?.name || storeData.fullName;
-                const initialName = prismaName || authName || (authData.user?.email?.split('@')[0] ?? '');
+                const initialName = prismaName || authName || (user?.email?.split('@')[0] ?? '');
 
                 if (initialName) {
                     setName(initialName);
@@ -62,14 +61,15 @@ export default function NameStep() {
             } catch (error) {
                 console.error('Failed to load name:', error);
             } finally {
-                setIsLoading(false);
+                if (isMounted) setIsLoading(false);
             }
         };
 
         loadName();
+        return () => { isMounted = false; };
     }, [user, authLoading]);
 
-    const handleContinue = () => {
+    const handleContinue = useCallback(() => {
         const trimmed = name.trim();
         if (!trimmed) {
             setError("Please enter your name.");
@@ -78,8 +78,10 @@ export default function NameStep() {
         setError("");
         OnboardingStore.set({ fullName: trimmed });
         setPlaced(true);
-        setTimeout(() => router.push("/onboarding/dob"), 1200);
-    };
+        startTransition(() => {
+            setTimeout(() => router.push("/onboarding/dob"), 1200);
+        });
+    }, [name, router]);
 
     if (isLoading) {
         return (

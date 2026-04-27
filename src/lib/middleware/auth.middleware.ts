@@ -51,18 +51,18 @@ export function withAuth(
 ) {
   return async (request: NextRequest, context?: any) => {
     try {
-      // Skip auth for PUBLIC endpoints
-      if (requiredLevel === AuthLevel.PUBLIC) {
-        return handler(request, context);
-      }
-
       // Get Supabase session
       const supabase = await createClient();
       const {
         data: { user: authUser },
       } = await supabase.auth.getUser();
 
-      // No session
+      // If no session and it's PUBLIC, just proceed
+      if (!authUser && requiredLevel === AuthLevel.PUBLIC) {
+        return handler(request, context);
+      }
+
+      // No session and NOT public
       if (!authUser) {
         return errorResponse(
           ErrorCodes.UNAUTHORIZED,
@@ -71,8 +71,27 @@ export function withAuth(
         );
       }
 
-      // Attach auth context without creating a user record automatically.
-      // User persistence is handled by onboarding/profile flow.
+      // Ensure user exists in Prisma (sync function)
+      const name = authUser.user_metadata?.full_name || '';
+      try {
+        const user = await prisma.user.findUnique({ where: { id: authUser.id } });
+        if (!user) {
+          await prisma.user.create({
+            data: {
+              id: authUser.id,
+              email: authUser.email || '',
+              name: name,
+              status: 'PENDING_VERIFICATION',
+              profileType: 'INDIVIDUAL_SALARIED',
+            }
+          });
+          console.log(`[Auth Middleware] Synced missing user from Supabase: ${authUser.id}`);
+        }
+      } catch (syncErr) {
+        console.error('[Auth Middleware] Error syncing user:', syncErr);
+      }
+
+      // Attach auth context
       const authContext: AuthContext = {
         userId: authUser.id,
         email: authUser.email ?? undefined,

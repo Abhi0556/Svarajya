@@ -1,14 +1,17 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useTransition } from "react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Users, GraduationCap, Camera, CheckCircle2, Trash2, Edit2 } from "lucide-react";
 import { OnboardingStore } from "@/lib/stores/onboardingStore";
-import { PageGuide } from "@/components/ui/PageGuide";
-import { VideoTutorialPlaceholder } from "@/components/ui/VideoTutorialPlaceholder";
 import { createClient } from "@/lib/supabase/client";
 import { useToast } from "@/components/providers/ToastProvider";
+import { useAuth } from "@/components/providers/AuthProvider";
+import dynamic from "next/dynamic";
+
+const PageGuide = dynamic(() => import("@/components/ui/PageGuide").then(mod => mod.PageGuide), { ssr: false });
+const VideoTutorialPlaceholder = dynamic(() => import("@/components/ui/VideoTutorialPlaceholder").then(mod => mod.VideoTutorialPlaceholder), { ssr: false });
 
 const STEPS = [
     { id: "family", icon: <Users className="w-5 h-5" />, label: "Family Members", desc: "Who depends on you financially?", route: "/foundation/family" },
@@ -43,6 +46,7 @@ function getLifePhase(dob: string | null): string {
 export default function FoundationHub() {
     const router = useRouter();
     const data = OnboardingStore.get();
+    const { user } = useAuth();
     const [profile, setProfile] = useState<null | Record<string, any>>(null);
     const [photoUploaded, setPhotoUploaded] = useState(false);
     const [photoUrl, setPhotoUrl] = useState<string | null>(null);
@@ -50,12 +54,14 @@ export default function FoundationHub() {
     const [uploading, setUploading] = useState(false);
     const supabase = createClient();
     const toast = useToast();
+    const [isPending, startTransition] = useTransition();
 
     useEffect(() => {
+        let isMounted = true;
         const fetchProfile = async () => {
             try {
                 const response = await fetch('/api/profile');
-                if (!response.ok) return;
+                if (!response.ok || !isMounted) return;
 
                 const json = await response.json();
                 const profileData = json?.data;
@@ -77,21 +83,18 @@ export default function FoundationHub() {
         };
 
         fetchProfile();
+        return () => { isMounted = false; };
     }, []);
 
-    // Fetch existing profile photo on load
+    // Load existing profile photo from user metadata
     useEffect(() => {
-        const fetchProfilePhoto = async () => {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (user?.user_metadata?.profile_photo) {
-                setPhotoUrl(user.user_metadata.profile_photo);
-                setPhotoUploaded(true);
-            }
-        };
-        fetchProfilePhoto();
-    }, []);
+        if (user?.user_metadata?.profile_photo) {
+            setPhotoUrl(user.user_metadata.profile_photo);
+            setPhotoUploaded(true);
+        }
+    }, [user]);
 
-    const handlePhotoUpload = async (file: File) => {
+    const handlePhotoUpload = useCallback(async (file: File) => {
         // Check file size (max 2MB)
         if (file.size > 2 * 1024 * 1024) {
             setUploadError("File size exceeds 2MB. Please choose a smaller image.");
@@ -148,9 +151,9 @@ export default function FoundationHub() {
         } finally {
             setUploading(false);
         }
-    };
+    }, [supabase]);
 
-    const handleRemovePhoto = async () => {
+    const handleRemovePhoto = useCallback(async () => {
         setUploading(true);
         try {
             if (photoUrl) {
@@ -180,9 +183,9 @@ export default function FoundationHub() {
         } finally {
             setUploading(false);
         }
-    };
+    }, [photoUrl, supabase]);
 
-    const saveFamilyMembers = async (familyMembers: any[]) => {
+    const saveFamilyMembers = useCallback(async (familyMembers: any[]) => {
         try {
             const response = await fetch('/api/profile', {
                 method: 'POST',
@@ -205,7 +208,7 @@ export default function FoundationHub() {
             toast('Failed to save family members. Please try again.', 'error');
             return false;
         }
-    };
+    }, [toast]);
 
     return (
         <div className="flex flex-col min-h-screen p-6 pb-24 relative">

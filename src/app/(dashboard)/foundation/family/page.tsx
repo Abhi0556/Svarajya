@@ -1,13 +1,14 @@
 "use client";
-
-import { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { Users, ShieldAlert, CheckCircle2, ArrowLeft } from "lucide-react";
 import { FamilyTreeGame, FamilyMember } from "@/components/module1/FamilyTreeGame";
-import { VideoTutorialPlaceholder } from "@/components/ui/VideoTutorialPlaceholder";
 import { OnboardingStore } from "@/lib/stores/onboardingStore";
 import { useToast } from "@/components/providers/ToastProvider";
+import dynamic from "next/dynamic";
+
+const VideoTutorialPlaceholder = dynamic(() => import("@/components/ui/VideoTutorialPlaceholder").then(mod => mod.VideoTutorialPlaceholder), { ssr: false });
 
 export default function Submodule1B() {
     const router = useRouter();
@@ -19,10 +20,13 @@ export default function Submodule1B() {
 
     // Fetch existing family members from database on page load
     useEffect(() => {
+        let isMounted = true;
         const fetchFamilyMembers = async () => {
             setIsLoading(true);
             try {
                 const response = await fetch('/api/profile');
+                if (!isMounted) return;
+                
                 if (response.ok) {
                     const json = await response.json();
                     const profileData = json?.data;
@@ -45,7 +49,7 @@ export default function Submodule1B() {
                         }));
                         console.log("Loaded members from DB:", loadedMembers);
                         setMembers(loadedMembers);
-                        OnboardingStore.set({ familyMembers: loadedMembers });
+                        OnboardingStore.set({ familyMembers: loadedMembers }, { sync: false });
                         setStep("mandal");
                     } else {
                         console.log("No family members found in database");
@@ -56,14 +60,15 @@ export default function Submodule1B() {
             } catch (err) {
                 console.error('Failed to load family members:', err);
             } finally {
-                setIsLoading(false);
+                if (isMounted) setIsLoading(false);
             }
         };
         
         fetchFamilyMembers();
+        return () => { isMounted = false; };
     }, []);
 
-    const handleAddMember = (memberData: Omit<FamilyMember, "id">) => {
+    const handleAddMember = useCallback((memberData: Omit<FamilyMember, "id">) => {
         console.log("Adding new member:", memberData);
         
         // Max 5 members validation
@@ -89,15 +94,15 @@ export default function Submodule1B() {
         const updatedMembers = [...members, newMember];
         console.log("Total members after adding:", updatedMembers.length);
         setMembers(updatedMembers);
-    };
+    }, [members, toast]);
 
-    const handleRemoveMember = (id: string) => {
+    const handleRemoveMember = useCallback((id: string) => {
         const updatedMembers = members.filter(m => m.id !== id);
         console.log("Member removed. Remaining:", updatedMembers.length);
         setMembers(updatedMembers);
-    };
+    }, [members]);
 
-    const handleSealMandal = async () => {
+    const handleSealMandal = useCallback(async () => {
         try {
             console.log("Saving ALL members to database. Total:", members.length);
             
@@ -144,11 +149,11 @@ export default function Submodule1B() {
             console.error('Error saving family members:', error);
             toast(error instanceof Error ? error.message : 'Failed to save family members. Please try again.', 'error');
         }
-    };
+    }, [members, toast]);
 
-    const handleFinish = () => {
+    const handleFinish = useCallback(() => {
         router.push('/foundation/education');
-    };
+    }, [router]);
 
     const dependencyCount = members.filter(m => m.dependent).length;
     const loadIndex = members.length > 0 ? Math.round((dependencyCount / members.length) * 100) : 0;

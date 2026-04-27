@@ -115,6 +115,66 @@ class UserService extends BaseService<User, CreateUserInput, UpdateUserInput> {
       throw error;
     }
   }
+
+  /**
+   * Sync user from Supabase to Prisma
+   */
+  async syncUserWithSupabase(userId: string, email: string, name?: string): Promise<User> {
+    try {
+      let user = await this.findById(userId);
+      if (!user) {
+        user = await this.create({
+          id: userId,
+          email: email,
+          name: name || '',
+          status: 'PENDING_VERIFICATION',
+          profileType: 'INDIVIDUAL_SALARIED',
+        });
+        console.log('[UserService] Synced missing user from Supabase:', userId);
+      }
+      return user;
+    } catch (error) {
+      console.error('[UserService] Error syncing user with Supabase:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Delete user from Prisma and Supabase Auth
+   */
+  async delete(id: string): Promise<User> {
+    try {
+      // First try to delete from Supabase Auth if service role key is available
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+      
+      if (supabaseUrl && supabaseServiceKey) {
+        // Use dynamically imported createClient or fetch directly to avoid top-level issues if not needed
+        const { createClient } = await import('@supabase/supabase-js');
+        const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
+          auth: {
+            autoRefreshToken: false,
+            persistSession: false
+          }
+        });
+        
+        const { error } = await supabaseAdmin.auth.admin.deleteUser(id);
+        if (error) {
+          console.error(`[UserService] Error deleting user ${id} from Supabase Auth:`, error);
+        } else {
+          console.log(`[UserService] Deleted user ${id} from Supabase Auth`);
+        }
+      } else {
+        console.warn('[UserService] SUPABASE_SERVICE_ROLE_KEY or NEXT_PUBLIC_SUPABASE_URL is missing. Cannot delete user from Supabase Auth.');
+      }
+      
+      // Delete from Prisma
+      return await super.delete(id);
+    } catch (error) {
+      console.error('[UserService] Error deleting:', error);
+      throw error;
+    }
+  }
 }
 
 export const userService = new UserService();
