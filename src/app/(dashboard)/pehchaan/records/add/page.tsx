@@ -40,10 +40,27 @@ function AddDocumentForm() {
     const profileName = OnboardingStore.get().fullName || "";
     const isNameMismatched = profileName.trim().length > 0 && nameOnDoc.trim().length > 0 && nameOnDoc.trim().toLowerCase() !== profileName.trim().toLowerCase();
 
+    // 1. Logic to handle numeric formatting and length for Aadhaar
+    const handleNumberChange = (val: string) => {
+        setError("");
+        if (docType === "aadhaar") {
+            const numericValue = val.replace(/\D/g, "");
+            if (numericValue.length <= 12) {
+                setDocNumber(numericValue);
+            }
+        } else {
+            setDocNumber(val);
+        }
+    };
+
     const handleSave = () => {
         setError("");
 
         if (!docType) { setError("Please select a document type."); return; }
+        if (docType === "aadhaar" && docNumber.length !== 12) { 
+            setError("Aadhaar must be exactly 12 digits."); 
+            return; 
+        }
         if (docType === "other" && !customDocName.trim()) { setError("Please provide a name for this document."); return; }
         if (!docNumber.trim()) { setError("Document number is required."); return; }
         if (!nameOnDoc.trim()) { setError("Please enter the name as printed on the document."); return; }
@@ -87,7 +104,7 @@ function AddDocumentForm() {
         ? IdentityStore.maskDocNumber(docNumber, docType)
         : docNumber;
 
-    // ——— Post-save First Win ———
+    // --- Post-save UI (Locked State) ---
     if (saved) {
         return (
             <div className="flex flex-col min-h-screen p-6 pb-24 relative">
@@ -123,14 +140,8 @@ function AddDocumentForm() {
                             </div>
                             <span className="text-sm font-bold text-amber-400">{saved.coverage.filled}/{saved.coverage.total}</span>
                         </div>
-                        <p className="text-xs text-white/30 mt-2">You&apos;ve taken the first step toward financial clarity.</p>
+                        <p className="text-xs text-white/30 mt-2">Data successfully saved to Rajya Database.</p>
                     </motion.div>
-
-                    {saved.strength < 100 && (
-                        <p className="text-xs text-white/30 mb-4 text-center">
-                            Next: Upload file to reach {Math.min(saved.strength + 20, 100)}%
-                        </p>
-                    )}
 
                     <div className="w-full space-y-3">
                         <button
@@ -151,18 +162,16 @@ function AddDocumentForm() {
         );
     }
 
-    // ——— Stage 1 Form ———
     return (
-        <div className="flex flex-col min-h-screen p-6 pb-24 relative">
+        <div className="flex flex-col min-h-screen p-6 pb-24 relative text-white">
             <div className="absolute inset-0 bg-gradient-to-b from-slate-950 via-[#0a1628] to-slate-950 pointer-events-none" />
             <div className="relative z-10 flex flex-col min-h-screen">
-                {/* Header */}
                 <div className="flex items-center gap-3 pt-8 mb-6">
                     <button onClick={() => router.back()} className="w-9 h-9 rounded-xl bg-white/6 border border-white/10 flex items-center justify-center shrink-0">
                         <ArrowLeft className="w-4 h-4 text-white/60" />
                     </button>
                     <div>
-                        <h1 className="text-lg font-semibold text-white">Add a Document</h1>
+                        <h1 className="text-lg font-semibold">Add a Document</h1>
                         <p className="text-xs text-white/35 mt-0.5">This takes less than a minute.</p>
                     </div>
                 </div>
@@ -173,7 +182,6 @@ function AddDocumentForm() {
                         <label className="text-xs text-white/40 uppercase tracking-wider">Document Type</label>
                         <div className="flex flex-wrap gap-2">
                             {DOC_TYPES.map(dt => {
-                                // Prevent duplicates for unique govt IDs
                                 const isUniqueGovtId = dt.id === "aadhaar" || dt.id === "pan" || dt.id === "passport" || dt.id === "voter" || dt.id === "dl";
                                 const alreadyExists = isUniqueGovtId && existingDocs.some(d => d.docType === dt.id);
 
@@ -181,8 +189,8 @@ function AddDocumentForm() {
                                     <button
                                         key={dt.id}
                                         disabled={alreadyExists}
-                                        onClick={() => { setDocType(dt.id); setError(""); setWarning(""); setAcknowledgedWarning(false); }}
-                                        className={`px-4 py-2.5 rounded-full border text-sm transition-all ${alreadyExists ? "bg-white/5 border-white/5 text-white/20 cursor-not-allowed" :
+                                        onClick={() => { setDocType(dt.id); setDocNumber(""); setError(""); setWarning(""); }}
+                                        className={`px-4 py-2.5 rounded-full border text-sm transition-all ${alreadyExists ? "bg-white/5 border-white/5 text-white/20" :
                                                 docType === dt.id
                                                     ? "bg-amber-400/15 border-amber-400 text-amber-400"
                                                     : "bg-white/5 border-white/10 text-white/55 hover:border-white/30"
@@ -195,17 +203,17 @@ function AddDocumentForm() {
                         </div>
                     </div>
 
-                    {/* Doc number — masked */}
+                    {/* Doc number with numeric restriction for Aadhaar */}
                     <div className="space-y-2">
                         <label className="text-xs text-white/40 uppercase tracking-wider">Document Number</label>
                         <div className="relative">
                             <input
                                 type="text"
                                 value={revealed ? docNumber : maskedValue}
-                                onChange={e => { setDocNumber(e.target.value); setRevealed(true); setError(""); setWarning(""); setAcknowledgedWarning(false); }}
+                                onChange={e => handleNumberChange(e.target.value)}
                                 onFocus={() => setRevealed(true)}
                                 onBlur={() => setRevealed(false)}
-                                placeholder="Enter document number"
+                                placeholder={docType === "aadhaar" ? "0000 0000 0000" : "Enter document number"}
                                 className="w-full bg-white/6 border border-white/15 rounded-xl px-4 py-3 pr-12 text-white placeholder-white/25 focus:outline-none focus:border-amber-400/60 transition-colors"
                             />
                             <button
@@ -216,76 +224,47 @@ function AddDocumentForm() {
                                 {revealed ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                             </button>
                         </div>
-                        <p className="text-[10px] text-white/20">This will be securely masked.</p>
                     </div>
 
-                    {/* Custom Doc Name (Only if Other) */}
-                    {docType === "other" && (
-                        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="space-y-2">
-                            <label className="text-xs text-white/40 uppercase tracking-wider">Document Name</label>
-                            <input
-                                type="text"
-                                value={customDocName}
-                                onChange={e => { setCustomDocName(e.target.value); setError(""); }}
-                                placeholder="e.g. Marriage Certificate"
-                                className="w-full bg-white/6 border border-amber-400/30 rounded-xl px-4 py-3 text-white placeholder-white/25 focus:outline-none focus:border-amber-400/60 transition-colors"
-                            />
-                        </motion.div>
-                    )}
+                    {/* File Upload restricted to PNG/PDF */}
+                    <div className="space-y-2">
+                        <label className="text-xs text-white/40 uppercase tracking-wider">
+                            Upload Scan <span className="text-white/20 normal-case">(PDF or PNG)</span>
+                        </label>
+                        <FileUploader
+                            folder="identity"
+                            label="Select File"
+                            onUploaded={(id) => setVaultFileId(id)}
+                            // Ensure your FileUploader component accepts and implements these props:
+                            accept=".pdf, .png"
+                        />
+                    </div>
 
-                    {/* Name on doc */}
+                    {/* Name on doc and Mismatch logic */}
                     <div className="space-y-2">
                         <label className="text-xs text-white/40 uppercase tracking-wider">Name on Document</label>
                         <input
                             type="text"
                             value={nameOnDoc}
                             onChange={e => { setNameOnDoc(e.target.value); setError(""); }}
-                            placeholder="Enter full name as printed"
-                            className="w-full bg-white/6 border border-white/15 rounded-xl px-4 py-3 text-white placeholder-white/25 focus:outline-none focus:border-amber-400/60 transition-colors"
+                            placeholder="Full name as printed"
+                            className="w-full bg-white/6 border border-white/15 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-amber-400/60"
                         />
                         {isNameMismatched && (
-                            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="mt-3 bg-amber-500/10 border border-amber-500/20 rounded-xl p-3">
-                                <p className="text-xs text-amber-400/90 mb-2">⚠ Name differs from Foundation profile ({profileName}).</p>
+                            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-3 bg-amber-500/10 border border-amber-500/20 rounded-xl p-3">
+                                <p className="text-xs text-amber-400/90 mb-2">⚠ Name differs from Foundation profile.</p>
                                 <input
                                     type="text"
-                                    placeholder="Reason (e.g., Maiden name, Spelling error on doc)"
+                                    placeholder="Reason for mismatch"
                                     value={mismatchReason}
-                                    onChange={e => { setMismatchReason(e.target.value); setError(""); }}
-                                    className="w-full bg-black/40 border border-amber-500/20 rounded-lg px-3 py-2 text-xs text-amber-100 placeholder-amber-400/30 focus:outline-none focus:border-amber-400/50"
+                                    onChange={e => setMismatchReason(e.target.value)}
+                                    className="w-full bg-black/40 border border-amber-500/20 rounded-lg px-3 py-2 text-xs text-amber-100 outline-none"
                                 />
                             </motion.div>
                         )}
                     </div>
 
-                    {/* Upload (optional) */}
-                    <div className="space-y-2">
-                        <label className="text-xs text-white/40 uppercase tracking-wider">
-                            Upload Document <span className="text-white/20 normal-case">(optional)</span>
-                        </label>
-                        <FileUploader
-                            folder="identity"
-                            label="Upload Document File"
-                            onUploaded={(id) => setVaultFileId(id)}
-                        />
-                        <p className="text-[10px] text-white/20">Stored locally by default.</p>
-                    </div>
-
-                    {/* Security */}
-                    <div className="bg-amber-400/5 border border-amber-400/15 rounded-xl p-3 flex items-start gap-2">
-                        <span className="text-amber-400 text-sm">🔒</span>
-                        <p className="text-xs text-white/40">Stored locally. Not shared without consent.</p>
-                    </div>
-
-                    {error && (
-                        <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-red-400 text-xs">
-                            ⚠ {error}
-                        </motion.p>
-                    )}
-                    {warning && !error && (
-                        <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-amber-400 text-xs bg-amber-400/10 p-2 rounded-lg border border-amber-400/20">
-                            ⚠ {warning} Tap Save again to proceed anyway.
-                        </motion.p>
-                    )}
+                    {error && <p className="text-red-400 text-xs">⚠ {error}</p>}
                 </div>
 
                 <div className="pb-4 pt-4">
