@@ -94,6 +94,23 @@ class UserService extends BaseService<User, CreateUserInput, UpdateUserInput> {
   }
 
   /**
+   * Update user
+   */
+  async update(id: string, data: UpdateUserInput): Promise<User> {
+    try {
+      const updatedUser = await super.update(id, data);
+
+      // Sync to Supabase Auth
+      await this.syncToSupabaseAuth(updatedUser);
+
+      return updatedUser;
+    } catch (error) {
+      console.error('[UserService] Error updating:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Get user with full profile
    */
   async getUserWithProfile(userId: string): Promise<User | null> {
@@ -140,6 +157,54 @@ class UserService extends BaseService<User, CreateUserInput, UpdateUserInput> {
   }
 
   /**
+   * Sync user updates to Supabase Auth
+   */
+  private async syncToSupabaseAuth(user: User): Promise<void> {
+    try {
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+      if (!supabaseUrl || !supabaseServiceKey) {
+        console.warn('[UserService] SUPABASE_SERVICE_ROLE_KEY or NEXT_PUBLIC_SUPABASE_URL is missing. Cannot sync to Supabase Auth.');
+        return;
+      }
+
+      const { createClient } = await import('@supabase/supabase-js');
+      const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false
+        }
+      });
+
+      // Prepare update data
+      const updateData: any = {};
+
+      if (user.email) {
+        updateData.email = user.email;
+      }
+
+      if (user.name) {
+        updateData.user_metadata = {
+          full_name: user.name,
+          ...((await supabaseAdmin.auth.admin.getUserById(user.id)).data.user?.user_metadata || {})
+        };
+      }
+
+      if (Object.keys(updateData).length > 0) {
+        const { error } = await supabaseAdmin.auth.admin.updateUserById(user.id, updateData);
+        if (error) {
+          console.error(`[UserService] Error syncing user ${user.id} to Supabase Auth:`, error);
+        } else {
+          console.log(`[UserService] Synced user ${user.id} updates to Supabase Auth`);
+        }
+      }
+    } catch (error) {
+      console.error('[UserService] Error syncing to Supabase Auth:', error);
+    }
+  }
+
+  /**
    * Delete user from Prisma and Supabase Auth
    */
   async delete(id: string): Promise<User> {
@@ -147,7 +212,7 @@ class UserService extends BaseService<User, CreateUserInput, UpdateUserInput> {
       // First try to delete from Supabase Auth if service role key is available
       const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
       const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-      
+
       if (supabaseUrl && supabaseServiceKey) {
         // Use dynamically imported createClient or fetch directly to avoid top-level issues if not needed
         const { createClient } = await import('@supabase/supabase-js');
@@ -157,7 +222,7 @@ class UserService extends BaseService<User, CreateUserInput, UpdateUserInput> {
             persistSession: false
           }
         });
-        
+
         const { error } = await supabaseAdmin.auth.admin.deleteUser(id);
         if (error) {
           console.error(`[UserService] Error deleting user ${id} from Supabase Auth:`, error);
@@ -167,7 +232,7 @@ class UserService extends BaseService<User, CreateUserInput, UpdateUserInput> {
       } else {
         console.warn('[UserService] SUPABASE_SERVICE_ROLE_KEY or NEXT_PUBLIC_SUPABASE_URL is missing. Cannot delete user from Supabase Auth.');
       }
-      
+
       // Delete from Prisma
       return await super.delete(id);
     } catch (error) {

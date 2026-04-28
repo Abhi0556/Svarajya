@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter, useParams } from "next/navigation";
 import { ArrowLeft, Link2, Bell, Edit3, Trash2, CheckCircle2, AlertTriangle } from "lucide-react";
-import { IdentityStore, calcSealStrength, IdentityDoc, ContactPoint } from "@/lib/identityStore";
+import { IdentityStore, calcSealStrength, IdentityDoc, ContactPoint, LinkMapping } from "@/lib/identityStore";
 import { OnboardingStore } from "@/lib/onboardingStore";
 import { SealStrengthRing } from "@/components/identity/SealStrengthRing";
 import { FileUploader } from "@/components/vault/FileUploader";
@@ -50,36 +50,68 @@ export default function DocDetail() {
     const [showDeleteModal, setShowDeleteModal] = useState(false);
 
     useEffect(() => {
-        IdentityStore.seedFromOnboarding();
-        const initialDoc = IdentityStore.getDoc(docId);
-        const initialContacts = IdentityStore.getContacts();
+        const fetchDoc = async () => {
+            try {
+                const response = await fetch(`/api/identity/${docId}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    const apiDoc = data.data;
+                    setDoc({
+                        id: apiDoc.id,
+                        docType: (apiDoc.idType?.toLowerCase() as any) || 'other',
+                        docNumber: apiDoc.numberMasked || '',
+                        normalizedDocNumber: apiDoc.numberMasked || '',
+                        nameOnDoc: '',
+                        expiryDate: apiDoc.expiryDate || undefined,
+                        issueDate: apiDoc.issuedDate || undefined,
+                        verificationStatus: 'not_verified',
+                        storageMode: 'local',
+                        createdAt: Date.now(),
+                        updatedAt: Date.now(),
+                        customDocName: undefined,
+                        dobOnDoc: undefined,
+                        placeOfIssue: undefined,
+                        linkedMobileId: undefined,
+                        linkedEmailId: undefined,
+                        notes: undefined,
+                        vaultFileId: undefined,
+                    });
+                    setContacts([]);
+                    setFormState({
+                        dobOnDoc: "",
+                        expiryDate: apiDoc.expiryDate || "",
+                        issueDate: apiDoc.issuedDate || "",
+                        placeOfIssue: "",
+                        linkedMobileId: "",
+                        linkedEmailId: "",
+                        notes: "",
+                        verification: 'not_verified'
+                    });
+                } else {
+                    console.error('Failed to fetch document:', response.status, response.statusText);
+                    try {
+                        const errorData = await response.json();
+                        console.error('Error details:', errorData);
+                    } catch (e) {
+                        console.error('Could not parse error response');
+                    }
+                }
+            } catch (error) {
+                console.error('Error fetching document:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
         
-        if (initialDoc) {
-            setDoc(initialDoc);
-            setContacts(initialContacts);
-            
-            const mobiles = initialContacts.filter(c => c.type === "mobile");
-            const emails = initialContacts.filter(c => c.type === "email");
-
-            setFormState({
-                dobOnDoc: initialDoc.dobOnDoc || "",
-                expiryDate: initialDoc.expiryDate || "",
-                issueDate: initialDoc.issueDate || "",
-                placeOfIssue: initialDoc.placeOfIssue || "",
-                linkedMobileId: initialDoc.linkedMobileId || (mobiles.length > 0 ? mobiles[0].id : ""),
-                linkedEmailId: initialDoc.linkedEmailId || (emails.length > 0 ? emails[0].id : ""),
-                notes: initialDoc.notes || "",
-                verification: initialDoc.verificationStatus || "not_verified"
-            });
-        }
-        setLoading(false);
+        fetchDoc();
     }, [docId]);
+
+    const links: LinkMapping[] = [];
 
     if (loading) return null;
     if (!doc) return <div className="text-white p-10">Record not found.</div>;
 
-    const links = IdentityStore.getLinksForDoc(docId);
-    const strength = calcSealStrength(doc, links);
+    const strength = doc ? calcSealStrength(doc, links) : 0;
     const foundationDob = OnboardingStore.get().dob;
 
     const handleAddContact = (type: 'mobile' | 'email') => {
@@ -105,7 +137,7 @@ export default function DocDetail() {
         }
     };
 
-    const handleSave = () => {
+    const handleSave = async () => {
         let errorMsg = "";
         let warningMsg = "";
         const today = new Date();
@@ -128,14 +160,42 @@ export default function DocDetail() {
             return;
         }
 
-        IdentityStore.updateDoc(docId, {
-            ...formState,
-            verificationStatus: formState.verification as IdentityDoc["verificationStatus"],
-        });
+        try {
+            const response = await fetch(`/api/identity/${docId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    expiryDate: formState.expiryDate,
+                    issuedDate: formState.issueDate,
+                }),
+            });
 
-        setSaved(true);
-        setEditing(false);
-        setTimeout(() => setSaved(false), 3000);
+            if (response.ok) {
+                const data = await response.json();
+                if (data.data) {
+                    setDoc(prev => prev ? {
+                        ...prev,
+                        expiryDate: data.data.expiryDate,
+                        issueDate: data.data.issuedDate,
+                    } : prev);
+                }
+                setSaved(true);
+                setEditing(false);
+                setTimeout(() => setSaved(false), 3000);
+            } else {
+                console.error('Failed to update document:', response.status, response.statusText);
+                try {
+                    const errorData = await response.json();
+                    console.error('Error response:', errorData);
+                } catch (e) {
+                    console.error('Could not parse error response');
+                }
+            }
+        } catch (error) {
+            console.error('Error updating document:', error);
+        }
     };
 
     return (
@@ -146,7 +206,7 @@ export default function DocDetail() {
                         <ArrowLeft className="w-5 h-5 text-white/60" />
                     </button>
                     <div className="flex-1">
-                        <h1 className="text-lg font-bold text-white">{doc.customDocName || doc.docType.toUpperCase()}</h1>
+                        <h1 className="text-lg font-bold text-white">{doc.customDocName || (doc.docType?.toUpperCase() || 'DOCUMENT')}</h1>
                     </div>
                     <SealStrengthRing percentage={strength} size={52} label="Seal" />
                 </header>
@@ -161,6 +221,8 @@ export default function DocDetail() {
                     <section className="grid grid-cols-2 gap-4">
                         <InputField label="DOB on Doc" type="date" value={formState.dobOnDoc} disabled={!editing} onChange={(v: string) => setFormState(s => ({...s, dobOnDoc: v}))} />
                         <InputField label="Expiry" type="date" value={formState.expiryDate} disabled={!editing} onChange={(v: string) => setFormState(s => ({...s, expiryDate: v}))} />
+                        <InputField label="Issue Date" type="date" value={formState.issueDate} disabled={!editing} onChange={(v: string) => setFormState(s => ({...s, issueDate: v}))} />
+                        <InputField label="Place of Issue" type="text" value={formState.placeOfIssue} disabled={!editing} onChange={(v: string) => setFormState(s => ({...s, placeOfIssue: v}))} />
                     </section>
 
                     <ContactSelect 
@@ -172,6 +234,17 @@ export default function DocDetail() {
                         onNewValueChange={(v: string) => setNewMobile(v)}
                         onAdd={() => handleAddContact('mobile')}
                         onSelect={(v: string) => setFormState(s => ({...s, linkedMobileId: v}))}
+                    />
+
+                    <ContactSelect 
+                        label="Linked Email" 
+                        value={formState.linkedEmailId} 
+                        options={contacts.filter(c => c.type === "email")} 
+                        editing={editing}
+                        newValue={newEmail}
+                        onNewValueChange={(v: string) => setNewEmail(v)}
+                        onAdd={() => handleAddContact('email')}
+                        onSelect={(v: string) => setFormState(s => ({...s, linkedEmailId: v}))}
                     />
                 </div>
 
@@ -186,8 +259,6 @@ export default function DocDetail() {
         </div>
     );
 }
-
-// --- FIXED SUB-COMPONENTS WITH TYPES ---
 
 interface ActionBtnProps { icon: React.ReactNode; label: string; onClick: () => void; active?: boolean; }
 function ActionButton({ icon, label, onClick, active }: ActionBtnProps) {
@@ -204,28 +275,48 @@ function InputField({ label, type, value, onChange, disabled }: InputProps) {
     return (
         <div className="space-y-1">
             <label className="text-[10px] font-bold text-white/30 uppercase">{label}</label>
-            <input type={type} value={value} onChange={e => onChange(e.target.value)} disabled={disabled}
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-3 text-sm text-white" />
+            <input 
+                type={type} 
+                value={value} 
+                onChange={e => onChange(e.target.value)} 
+                disabled={disabled}
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-3 text-sm text-white disabled:opacity-50"
+            />
         </div>
     );
 }
 
 interface ContactProps { 
-    label: string; value: string; options: ContactPoint[]; editing: boolean; 
-    newValue: string; onNewValueChange: (v: string) => void; onAdd: () => void; onSelect: (v: string) => void; 
+    label: string; 
+    value: string; 
+    options: ContactPoint[]; 
+    editing: boolean; 
+    newValue: string; 
+    onNewValueChange: (v: string) => void; 
+    onAdd: () => void; 
+    onSelect: (v: string) => void; 
 }
 function ContactSelect({ label, value, options, editing, newValue, onNewValueChange, onAdd, onSelect }: ContactProps) {
     return (
         <div className="space-y-2">
             <label className="text-[10px] font-bold text-white/30 uppercase">{label}</label>
-            <select value={value} onChange={e => onSelect(e.target.value)} disabled={!editing}
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-3 text-sm text-white">
+            <select 
+                value={value} 
+                onChange={e => onSelect(e.target.value)} 
+                disabled={!editing}
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-3 text-sm text-white disabled:opacity-50"
+            >
                 <option value="">Select...</option>
                 {options.map(c => <option key={c.id} value={c.id}>{c.value}</option>)}
             </select>
             {editing && (
                 <div className="flex gap-2">
-                    <input value={newValue} onChange={e => onNewValueChange(e.target.value)} className="flex-1 bg-transparent border-b border-white/10 text-xs text-white" />
+                    <input 
+                        value={newValue} 
+                        onChange={e => onNewValueChange(e.target.value)} 
+                        placeholder="Add new..."
+                        className="flex-1 bg-transparent border-b border-white/10 text-xs text-white placeholder-white/30"
+                    />
                     <button onClick={onAdd} className="text-amber-400 text-[10px] font-bold">LINK</button>
                 </div>
             )}

@@ -232,23 +232,20 @@ export default function AuthGateway() {
                 // FIXED: Create user in Prisma immediately after signup using secret bypass
                 if (data?.user) {
                     try {
-                        const profileRes = await fetch('/api/profile', {
+                        const profileRes = await fetch('/api/auth/create-user', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
                                 id: data.user.id,
                                 email: data.user.email,
                                 name: fullName.trim() || trimmedEmail.split('@')[0],
-                                isFirstLogin: true,
-                                profileType: 'INDIVIDUAL_SALARIED',
-                                _internal_secret: process.env.NEXT_PUBLIC_INTERNAL_SECRET || 'SVARAJYA_INTERNAL_SYNC_2025',
                             }),
                         });
-                        
+
                         if (!profileRes.ok) {
                             console.error("Profile creation failed:", await profileRes.text());
                         } else {
-                            console.log("User successfully created in Prisma via sync bypass");
+                            console.log("User successfully created in Prisma via public create-user endpoint");
                         }
 
                         // Also attempt to sign in immediately to establish session (if confirmation not required)

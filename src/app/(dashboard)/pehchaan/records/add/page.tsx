@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, Eye, EyeOff, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Eye, EyeOff, CheckCircle2, Edit3 } from "lucide-react";
 import { IdentityStore, DocType } from "@/lib/identityStore";
 import { OnboardingStore } from "@/lib/onboardingStore";
 import { FileUploader } from "@/components/vault/FileUploader";
@@ -18,6 +18,14 @@ const DOC_TYPES: { id: DocType; label: string }[] = [
     { id: "voter", label: "Voter ID" },
     { id: "other", label: "Other" },
 ];
+
+interface ExistingDocument {
+    id: string;
+    idType: string;
+    numberMasked: string;
+    expiryDate: string | null;
+    issuedDate: string | null;
+}
 
 function AddDocumentForm() {
     const router = useRouter();
@@ -36,24 +44,63 @@ function AddDocumentForm() {
     const [mismatchReason, setMismatchReason] = useState("");
     const [saved, setSaved] = useState<{ id: string; strength: number; coverage: { filled: number; total: number } } | null>(null);
 
-    const existingDocs = IdentityStore.getDocs();
+    
+    // New state for database documents
+    const [dbDocuments, setDbDocuments] = useState<ExistingDocument[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [editing, setEditing] = useState(false);
+    const [existingDoc, setExistingDoc] = useState<ExistingDocument | null>(null);
+
     const profileName = OnboardingStore.get().fullName || "";
     const isNameMismatched = profileName.trim().length > 0 && nameOnDoc.trim().length > 0 && nameOnDoc.trim().toLowerCase() !== profileName.trim().toLowerCase();
 
-    // 1. Logic to handle numeric formatting and length for Aadhaar
-    const handleNumberChange = (val: string) => {
-        setError("");
-        if (docType === "aadhaar") {
-            const numericValue = val.replace(/\D/g, "");
-            if (numericValue.length <= 12) {
-                setDocNumber(numericValue);
+    // Fetch documents from database on mount
+    useEffect(() => {
+        const fetchDocuments = async () => {
+            try {
+                const response = await fetch('/api/identity');
+                if (response.ok) {
+                    const data = await response.json();
+                    const docs = data.data || [];
+                    setDbDocuments(docs);
+                    
+                    // Check if document of selected type already exists
+                    const existing = docs.find((d: ExistingDocument) => 
+                        d.idType.toUpperCase() === docType.toUpperCase()
+                    );
+                    setExistingDoc(existing || null);
+                }
+            } catch (error) {
+                console.error('Failed to fetch documents:', error);
+            } finally {
+                setLoading(false);
             }
-        } else {
-            setDocNumber(val);
-        }
+        };
+        
+        fetchDocuments();
+    }, [docType]);
+
+    // When switching document types, check if it exists
+    const handleDocTypeChange = (newType: DocType) => {
+        setDocType(newType);
+        // Update URL to reflect selected document type
+        router.push(`/pehchaan/records/add?type=${newType}`, { scroll: false });
+        
+        const existing = dbDocuments.find((d: ExistingDocument) => 
+            d.idType.toUpperCase() === newType.toUpperCase()
+        );
+        setExistingDoc(existing || null);
+        setEditing(false);
+        // Reset form
+        setDocNumber("");
+        setNameOnDoc("");
+        setError("");
+        setWarning("");
+        setAcknowledgedWarning(false);
     };
 
-    const handleSave = () => {
+    // Handle save for both new and existing documents
+    const handleSaveDocument = async () => {
         setError("");
 
         if (!docType) { setError("Please select a document type."); return; }
@@ -79,7 +126,68 @@ function AddDocumentForm() {
             return;
         }
 
+        // Generate numberMasked (last 4 digits)
+        const numberMasked = docNumber.slice(-4);
+
         try {
+            // If editing existing document
+            if (editing && existingDoc) {
+                const payload = {
+                    expiryDate: null,
+                    issuedDate: null,
+                };
+
+                const response = await fetch(`/api/identity/${existingDoc.id}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(payload),
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    console.error('API error response:', errorData);
+                    setError(errorData.error || 'Failed to update document');
+                    return;
+                }
+
+                // Navigate back to records after successful edit
+                router.push("/pehchaan/records");
+                return;
+            }
+
+            // If adding new document
+            const payload = {
+                idType: docType.toUpperCase(),
+                numberMasked,
+                expiryDate: null,
+                issuedDate: null,
+            };
+
+            console.log('Submitting document to API:', payload);
+
+            const response = await fetch('/api/identity', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(payload),
+            });
+
+            console.log('API response status:', response.status);
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                console.error('API error response:', errorData);
+                setError(errorData.error || 'Failed to save document');
+                return;
+            }
+
+            const data = await response.json();
+            console.log('Document saved successfully:', data);
+
+            // Update local store as well for UI consistency
             const doc = IdentityStore.addDoc({
                 docType,
                 customDocName: docType === "other" ? customDocName.trim() : undefined,
@@ -88,21 +196,141 @@ function AddDocumentForm() {
                 vaultFileId: vaultFileId || undefined,
                 notes: mismatchReason ? `Name mismatch reason: ${mismatchReason}` : undefined,
             });
+
             const strength = doc.vaultFileId ? 40 : 20;
             const coverage = IdentityStore.getCoverage();
             setSaved({ id: doc.id, strength, coverage });
         } catch (e: unknown) {
+            console.error('Error saving document:', e);
             if (e instanceof Error && e.message === "DUPLICATE") {
                 setError("This document already exists in your vault.");
             } else {
-                setError("Something went wrong.");
+                setError("Something went wrong while saving.");
             }
+        }
+    };
+
+    // 1. Logic to handle numeric formatting and length for Aadhaar
+    const handleNumberChange = (val: string) => {
+        setError("");
+        if (docType === "aadhaar") {
+            const numericValue = val.replace(/\D/g, "");
+            if (numericValue.length <= 12) {
+                setDocNumber(numericValue);
+            }
+        } else {
+            setDocNumber(val);
         }
     };
 
     const maskedValue = docNumber && !revealed
         ? IdentityStore.maskDocNumber(docNumber, docType)
         : docNumber;
+
+    const formatDateForDisplay = (dateString: string | null) => {
+        if (!dateString) return "Not specified";
+        try {
+            return new Date(dateString).toLocaleDateString('en-IN', { 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+            });
+        } catch {
+            return dateString;
+        }
+    };
+
+    // --- Loading State ---
+    if (loading) {
+        return (
+            <div className="flex flex-col min-h-screen p-6 pb-24 relative">
+                <div className="absolute inset-0 bg-gradient-to-b from-slate-950 via-[#0a1628] to-slate-950 pointer-events-none" />
+                <div className="relative z-10 flex flex-col min-h-screen items-center justify-center">
+                    <motion.div
+                        animate={{ rotate: 360 }}
+                        transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                        className="w-8 h-8 border-2 border-amber-400/30 border-t-amber-400 rounded-full"
+                    />
+                    <p className="text-white/40 text-sm mt-4">Loading document...</p>
+                </div>
+            </div>
+        );
+    }
+
+    // --- Read-Only View for Existing Document (when not editing) ---
+    if (existingDoc && !editing) {
+        return (
+            <div className="flex flex-col min-h-screen p-6 pb-24 relative text-white">
+                <div className="absolute inset-0 bg-gradient-to-b from-slate-950 via-[#0a1628] to-slate-950 pointer-events-none" />
+                <div className="relative z-10 flex flex-col min-h-screen">
+                    <div className="flex items-center gap-3 pt-8 mb-6">
+                        <button onClick={() => router.back()} className="w-9 h-9 rounded-xl bg-white/6 border border-white/10 flex items-center justify-center shrink-0">
+                            <ArrowLeft className="w-4 h-4 text-white/60" />
+                        </button>
+                        <div>
+                            <h1 className="text-lg font-semibold">{DOC_TYPES.find(d => d.id === docType)?.label || "Document"}</h1>
+                            <p className="text-xs text-white/35 mt-0.5">Your saved document</p>
+                        </div>
+                    </div>
+
+                    <div className="flex-1 space-y-5 mb-6">
+                        {/* Document Type - Read Only */}
+                        <div className="space-y-2">
+                            <label className="text-xs text-white/40 uppercase tracking-wider">Document Type</label>
+                            <div className="px-4 py-3 bg-white/6 border border-white/15 rounded-xl text-white">
+                                {DOC_TYPES.find(d => d.id === docType)?.label}
+                            </div>
+                        </div>
+
+                        {/* Document Number - Read Only */}
+                        <div className="space-y-2">
+                            <label className="text-xs text-white/40 uppercase tracking-wider">Document Number</label>
+                            <div className="px-4 py-3 bg-white/6 border border-white/15 rounded-xl text-white/70 flex items-center justify-between">
+                                <span>****{existingDoc.numberMasked}</span>
+                                <Eye className="w-4 h-4 text-white/30" />
+                            </div>
+                        </div>
+
+                        {/* Issued Date - Read Only */}
+                        <div className="space-y-2">
+                            <label className="text-xs text-white/40 uppercase tracking-wider">Issued Date</label>
+                            <div className="px-4 py-3 bg-white/6 border border-white/15 rounded-xl text-white/70">
+                                {formatDateForDisplay(existingDoc.issuedDate)}
+                            </div>
+                        </div>
+
+                        {/* Expiry Date - Read Only */}
+                        <div className="space-y-2">
+                            <label className="text-xs text-white/40 uppercase tracking-wider">Expiry Date</label>
+                            <div className="px-4 py-3 bg-white/6 border border-white/15 rounded-xl text-white/70">
+                                {formatDateForDisplay(existingDoc.expiryDate)}
+                            </div>
+                        </div>
+
+                        <div className="bg-white/5 border border-white/10 rounded-xl p-3 mt-4">
+                            <p className="text-xs text-white/50">Document is stored securely in Rajya Database</p>
+                        </div>
+                    </div>
+
+                    <div className="space-y-3">
+                        <button
+                            onClick={() => setEditing(true)}
+                            className="w-full bg-amber-400 text-black font-semibold py-4 rounded-xl text-sm hover:bg-amber-300 transition-colors flex items-center justify-center gap-2"
+                        >
+                            <Edit3 className="w-4 h-4" />
+                            Edit Document
+                        </button>
+                        <button
+                            onClick={() => router.push("/pehchaan")}
+                            className="w-full text-white/35 text-sm py-3 hover:text-white/55 transition-colors"
+                        >
+                            Back to Vault
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     // --- Post-save UI (Locked State) ---
     if (saved) {
@@ -151,7 +379,7 @@ function AddDocumentForm() {
                             Strengthen This Seal
                         </button>
                         <button
-                            onClick={() => router.push("/pehchaan/records")}
+                            onClick={() => router.push("/pehchaan")}
                             className="w-full text-white/35 text-sm py-3 hover:text-white/55 transition-colors"
                         >
                             Back to Vault
@@ -167,12 +395,19 @@ function AddDocumentForm() {
             <div className="absolute inset-0 bg-gradient-to-b from-slate-950 via-[#0a1628] to-slate-950 pointer-events-none" />
             <div className="relative z-10 flex flex-col min-h-screen">
                 <div className="flex items-center gap-3 pt-8 mb-6">
-                    <button onClick={() => router.back()} className="w-9 h-9 rounded-xl bg-white/6 border border-white/10 flex items-center justify-center shrink-0">
+                    <button 
+                        onClick={() => editing ? setEditing(false) : router.push("/pehchaan/records")} 
+                        className="w-9 h-9 rounded-xl bg-white/6 border border-white/10 flex items-center justify-center shrink-0"
+                    >
                         <ArrowLeft className="w-4 h-4 text-white/60" />
                     </button>
                     <div>
-                        <h1 className="text-lg font-semibold">Add a Document</h1>
-                        <p className="text-xs text-white/35 mt-0.5">This takes less than a minute.</p>
+                        <h1 className="text-lg font-semibold">
+                            {editing && existingDoc ? "Edit Document" : "Add a Document"}
+                        </h1>
+                        <p className="text-xs text-white/35 mt-0.5">
+                            {editing && existingDoc ? "Update your document details" : "This takes less than a minute."}
+                        </p>
                     </div>
                 </div>
 
@@ -183,20 +418,22 @@ function AddDocumentForm() {
                         <div className="flex flex-wrap gap-2">
                             {DOC_TYPES.map(dt => {
                                 const isUniqueGovtId = dt.id === "aadhaar" || dt.id === "pan" || dt.id === "passport" || dt.id === "voter" || dt.id === "dl";
-                                const alreadyExists = isUniqueGovtId && existingDocs.some(d => d.docType === dt.id);
+                                const alreadyExists = isUniqueGovtId && dbDocuments.some(d => d.idType.toLowerCase() === dt.id);
+                                const isCurrentType = dt.id === docType;
 
                                 return (
                                     <button
                                         key={dt.id}
-                                        disabled={alreadyExists}
-                                        onClick={() => { setDocType(dt.id); setDocNumber(""); setError(""); setWarning(""); }}
-                                        className={`px-4 py-2.5 rounded-full border text-sm transition-all ${alreadyExists ? "bg-white/5 border-white/5 text-white/20" :
-                                                docType === dt.id
-                                                    ? "bg-amber-400/15 border-amber-400 text-amber-400"
-                                                    : "bg-white/5 border-white/10 text-white/55 hover:border-white/30"
-                                            }`}
+                                        disabled={alreadyExists && !isCurrentType}
+                                        onClick={() => handleDocTypeChange(dt.id)}
+                                        className={`px-4 py-2.5 rounded-full border text-sm transition-all ${
+                                            alreadyExists && !isCurrentType ? "bg-white/5 border-white/5 text-white/20 cursor-not-allowed" :
+                                            isCurrentType
+                                                ? "bg-amber-400/15 border-amber-400 text-amber-400"
+                                                : "bg-white/5 border-white/10 text-white/55 hover:border-white/30"
+                                        }`}
                                     >
-                                        {dt.label} {alreadyExists && "(Added)"}
+                                        {dt.label} {alreadyExists && !isCurrentType && "(Added)"}
                                     </button>
                                 );
                             })}
@@ -269,10 +506,10 @@ function AddDocumentForm() {
 
                 <div className="pb-4 pt-4">
                     <button
-                        onClick={handleSave}
+                        onClick={handleSaveDocument}
                         className="w-full bg-amber-400 text-black font-semibold py-4 rounded-xl text-sm hover:bg-amber-300 transition-colors"
                     >
-                        Save Document
+                        {editing ? "Update Document" : "Save Document"}
                     </button>
                 </div>
             </div>

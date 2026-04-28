@@ -32,8 +32,90 @@ export default function IdentityHub() {
     const level = IdentityStore.getLevel();
     const [now] = useState(() => Date.now());
 
+    // Fetch documents from database
+    const [dbDocuments, setDbDocuments] = useState<any[]>([]);
+    const fetchDocuments = async () => {
+        try {
+            const response = await fetch('/api/identity');
+            if (response.ok) {
+                const data = await response.json();
+                setDbDocuments(data.data || []);
+            }
+        } catch (error) {
+            console.error('Failed to fetch documents:', error);
+        }
+    };
+    useEffect(() => {
+        fetchDocuments();
+    }, []);
+
+    // Refetch documents when page becomes visible (e.g., returning from add page or tab switch)
+    useEffect(() => {
+        const handleVisibilityChange = () => {
+            if (!document.hidden) {
+                fetchDocuments();
+            }
+        };
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+    }, []);
+
+    // Map DB documents to display format
+    const displayDocs = dbDocuments.map(d => ({
+        id: d.id,
+        docType: d.idType.toLowerCase() as DocType,
+        docNumber: '****' + d.numberMasked, // placeholder for full number
+        expiryDate: d.expiryDate,
+        verificationStatus: 'not_verified' as const,
+    }));
+
+    // Calculate confidence based on documents
+    const calculateConfidence = () => {
+        let total = 0;
+        displayDocs.forEach(doc => {
+            total += 20; // base per document
+            if (doc.expiryDate) {
+                const expiry = new Date(doc.expiryDate);
+                if (expiry > new Date()) {
+                    total += 10; // valid expiry
+                }
+            }
+            // Verified document +10% (currently all are 'not_verified', so +0)
+            if (doc.verificationStatus !== 'not_verified') {
+                total += 10;
+            }
+        });
+        return Math.min(100, total);
+    };
+
+    const dbConfidence = calculateConfidence();
+
+    // Calculate level based on confidence
+    const getLevel = (confidence: number) => {
+        if (confidence < 20) return "Basic";
+        if (confidence < 40) return "Bronze";
+        if (confidence < 60) return "Silver";
+        if (confidence < 80) return "Gold";
+        return "Platinum";
+    };
+
+    const dbLevel = getLevel(dbConfidence);
+
+    // Handle document click navigation
+    const handleDocClick = (docType: string) => {
+        const existingDoc = displayDocs.find(d => d.docType === docType);
+        if (existingDoc) {
+            router.push(`/pehchaan/records/doc/${existingDoc.id}`);
+        } else {
+            router.push(`/pehchaan/records/add?type=${docType}`);
+        }
+    };
+
+    // Calculate coverage from DB documents
+    const dbCoverage = { filled: new Set(displayDocs.map(d => d.docType)).size, total: 6 };
+
     const getExpiryBadge = (docType: DocType) => {
-        const typeDocs = IdentityStore.getDocsByType(docType);
+        const typeDocs = displayDocs.filter(d => d.docType === docType);
         for (const doc of typeDocs) {
             if (!doc.expiryDate) continue;
             const days = Math.ceil((new Date(doc.expiryDate).getTime() - now) / (1000 * 60 * 60 * 24));
@@ -72,16 +154,16 @@ export default function IdentityHub() {
                     <div className="flex items-center justify-between mb-3">
                         <div>
                             <p className="text-xs text-white/40 uppercase tracking-wider">Identity Coverage</p>
-                            <p className="text-white font-semibold mt-0.5">{coverage.filled} of {coverage.total} <span className="text-white/40 font-normal text-xs">essential documents</span></p>
+                            <p className="text-white font-semibold mt-0.5">{dbCoverage.filled} of {dbCoverage.total} <span className="text-white/40 font-normal text-xs">essential documents</span></p>
                         </div>
-                        <SealStrengthRing percentage={confidence} size={52} label="Avg" />
+                        <SealStrengthRing percentage={dbConfidence} size={52} label="Avg" />
                     </div>
                     <div className="h-1.5 bg-white/8 rounded-full overflow-hidden mb-2">
-                        <div className="h-full bg-amber-400 rounded-full transition-all duration-700" style={{ width: `${(coverage.filled / coverage.total) * 100}%` }} />
+                        <div className="h-full bg-amber-400 rounded-full transition-all duration-700" style={{ width: `${(dbCoverage.filled / dbCoverage.total) * 100}%` }} />
                     </div>
                     <div className="flex items-center justify-between">
                         <p className="text-xs text-white/50">Add more to strengthen your identity readiness.</p>
-                        <span className="text-[10px] text-amber-400 bg-amber-400/10 border border-amber-400/20 px-2 py-0.5 rounded-full">{level}</span>
+                        <span className="text-[10px] text-amber-400 bg-amber-400/10 border border-amber-400/20 px-2 py-0.5 rounded-full">{dbLevel}</span>
                     </div>
                 </div>
 
@@ -90,10 +172,10 @@ export default function IdentityHub() {
                     <div className="flex-1">
                         <p className="text-xs text-white/40">Average Document Seal Quality</p>
                         <div className="h-1 bg-white/8 rounded-full overflow-hidden mt-1">
-                            <div className="h-full bg-amber-400 rounded-full transition-all" style={{ width: `${confidence}%` }} />
+                            <div className="h-full bg-amber-400 rounded-full transition-all" style={{ width: `${dbConfidence}%` }} />
                         </div>
                     </div>
-                    <span className="text-sm font-bold text-amber-400">{confidence}%</span>
+                    <span className="text-sm font-bold text-amber-400">{dbConfidence}%</span>
                 </div>
 
                 {/* Seal Cabinet */}
@@ -101,16 +183,16 @@ export default function IdentityHub() {
                     {/* Render core docs */}
                     {["aadhaar", "pan", "passport", "dl", "voter"].map(type => {
                         const meta = DOC_META[type as DocType];
-                        const typeDocs = IdentityStore.getDocsByType(type as DocType);
+                        const typeDocs = displayDocs.filter(d => d.docType === type);
                         const docCount = typeDocs.length;
                         const expiry = getExpiryBadge(type as DocType);
                         const hasVerified = typeDocs.some(d => d.verificationStatus !== "not_verified");
-                        const strength = typeDocs.length > 0 ? calcSealStrength(typeDocs[0], links) : 0;
+                        const strength = typeDocs.length > 0 ? calcSealStrength(typeDocs[0] as any, links) : 0;
 
                         return (
                             <button
                                 key={type}
-                                onClick={() => docCount > 0 ? router.push(`/pehchaan/records/doc/${typeDocs[0].id}`) : router.push(`/pehchaan/records/add?type=${type}`)}
+                                onClick={() => handleDocClick(type)}
                                 className="bg-white/5 border border-white/10 hover:border-amber-400/40 rounded-2xl p-4 text-left transition-all"
                             >
                                 <div className="flex items-start justify-between mb-3">
@@ -123,7 +205,7 @@ export default function IdentityHub() {
                                 <p className="text-sm font-medium text-white">{meta.label}</p>
                                 {docCount > 0 ? (
                                     <>
-                                        <p className="text-xs text-white/40 mt-0.5">{IdentityStore.maskDocNumber(typeDocs[0].docNumber, type as DocType)}</p>
+                                        <p className="text-xs text-white/40 mt-0.5">{typeDocs[0].docNumber}</p>
                                         <p className="text-[10px] text-amber-400/70 mt-1">{strength}% Secure</p>
                                     </>
                                 ) : (
@@ -134,8 +216,8 @@ export default function IdentityHub() {
                     })}
 
                     {/* Render dynamically added "Other" documents as separate cards */}
-                    {IdentityStore.getDocsByType("other").map(otherDoc => {
-                        const strength = calcSealStrength(otherDoc, links);
+                    {displayDocs.filter(d => d.docType === "other").map(otherDoc => {
+                        const strength = 0; // Placeholder
                         const hasVerified = otherDoc.verificationStatus !== "not_verified";
 
                         return (
@@ -150,8 +232,8 @@ export default function IdentityHub() {
                                         {hasVerified && <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />}
                                     </div>
                                 </div>
-                                <p className="text-sm font-medium text-white truncate">{otherDoc.customDocName || "Other"}</p>
-                                <p className="text-xs text-white/40 mt-0.5">{IdentityStore.maskDocNumber(otherDoc.docNumber, "other")}</p>
+                                <p className="text-sm font-medium text-white truncate">Other</p>
+                                <p className="text-xs text-white/40 mt-0.5">{otherDoc.docNumber}</p>
                                 <p className="text-[10px] text-amber-400/70 mt-1">{strength}% Secure</p>
                             </button>
                         );

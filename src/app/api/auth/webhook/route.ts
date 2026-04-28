@@ -27,15 +27,41 @@ export async function POST(request: Request) {
       if (email && id) {
         await userService.syncUserWithSupabase(id, email, name);
       }
+    } else if (type === 'UPDATE' && record) {
+      // Sync updated user to Prisma
+      const id = record.id;
+      const email = record.email;
+      const name = record.raw_user_meta_data?.full_name || '';
+
+      try {
+        const existing = await userService.findById(id);
+        if (existing) {
+          const updateData: any = {};
+          if (email && email !== existing.email) {
+            updateData.email = email;
+          }
+          if (name && name !== existing.name) {
+            updateData.name = name;
+          }
+          if (Object.keys(updateData).length > 0) {
+            await userService.update(id, updateData);
+            console.log(`[Webhook] Updated user ${id} in Prisma`);
+          }
+        } else {
+          // If user doesn't exist in Prisma, create it
+          await userService.syncUserWithSupabase(id, email || '', name);
+        }
+      } catch (err) {
+        console.error(`[Webhook] Failed to update user ${id} in Prisma:`, err);
+      }
     } else if (type === 'DELETE' && old_record) {
       // Delete user from Prisma if deleted from Supabase Auth
       const id = old_record.id;
       try {
         const existing = await userService.findById(id);
         if (existing) {
-          // Instead of calling the overridden delete which tries to delete from Supabase again,
-          // we should call the base delete or prisma directly
-          const { prisma } = require('@/lib/prisma');
+          // Use prisma directly to avoid trying to delete from Supabase again
+          const { prisma } = await import('@/lib/prisma');
           await prisma.user.delete({ where: { id } });
           console.log(`[Webhook] Deleted user ${id} from Prisma`);
         }

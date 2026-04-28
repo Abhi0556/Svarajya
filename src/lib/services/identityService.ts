@@ -74,6 +74,49 @@ class IdentityService extends BaseService<IdentityRecord, CreateIdentityRecordIn
   }
 
   /**
+   * Find identity record by ID
+   */
+  async findById(id: string): Promise<IdentityRecord | null> {
+    try {
+      return await prisma.identityRecord.findUnique({
+        where: { id },
+      });
+    } catch (error) {
+      console.error('[IdentityService] Error finding by id:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update identity record
+   */
+  async update(id: string, data: UpdateIdentityRecordInput): Promise<IdentityRecord> {
+    try {
+      return await prisma.identityRecord.update({
+        where: { id },
+        data,
+      });
+    } catch (error) {
+      console.error('[IdentityService] Error updating record:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Delete identity record
+   */
+  async delete(id: string): Promise<IdentityRecord> {
+    try {
+      return await prisma.identityRecord.delete({
+        where: { id },
+      });
+    } catch (error) {
+      console.error('[IdentityService] Error deleting record:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Get expired identity documents
    */
   async getExpired(userId: string): Promise<IdentityRecord[]> {

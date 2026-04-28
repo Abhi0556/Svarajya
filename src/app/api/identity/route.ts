@@ -53,6 +53,7 @@ async function getHandler(request: NextRequest): Promise<NextResponse> {
 async function postHandler(request: NextRequest): Promise<NextResponse> {
   const authContext = getAuthContext(request);
   if (!authContext) {
+    console.error('[Identity POST] No auth context');
     return errorResponse(
       ErrorCodes.UNAUTHORIZED,
       'Authentication required',
@@ -60,11 +61,15 @@ async function postHandler(request: NextRequest): Promise<NextResponse> {
     );
   }
 
+  console.log('[Identity POST] Auth context userId:', authContext.userId);
+
   try {
     const data: CreateIdentityRecordRequest | (UpdateIdentityRecordRequest & { id?: string }) = await request.json();
+    console.log('[Identity POST] Received data:', data);
 
     // Validate required fields
     if (!data.idType || !data.numberMasked) {
+      console.error('[Identity POST] Validation failed: missing idType or numberMasked');
       return errorResponse(
         ErrorCodes.VALIDATION_ERROR,
         'ID type and masked number are required',
@@ -75,6 +80,7 @@ async function postHandler(request: NextRequest): Promise<NextResponse> {
     let record;
 
     if ('id' in data && data.id) {
+      console.log('[Identity POST] Updating existing record:', data.id);
       // Update existing
       record = await identityService.update(data.id, {
         idType: data.idType,
@@ -82,7 +88,9 @@ async function postHandler(request: NextRequest): Promise<NextResponse> {
         expiryDate: data.expiryDate ? new Date(data.expiryDate) : undefined,
         issuedDate: data.issuedDate ? new Date(data.issuedDate) : undefined,
       });
+      console.log('[Identity POST] Updated record:', record.id);
     } else {
+      console.log('[Identity POST] Creating new record for user:', authContext.userId);
       // Create new (will handle unique constraint on userId + idType)
       record = await identityService.createForUser(authContext.userId, {
         idType: data.idType,
@@ -90,6 +98,7 @@ async function postHandler(request: NextRequest): Promise<NextResponse> {
         expiryDate: data.expiryDate ? new Date(data.expiryDate) : undefined,
         issuedDate: data.issuedDate ? new Date(data.issuedDate) : undefined,
       });
+      console.log('[Identity POST] Created record:', record.id);
     }
 
     const response: IdentityRecordResponse = {
@@ -103,9 +112,10 @@ async function postHandler(request: NextRequest): Promise<NextResponse> {
       updatedAt: record.updatedAt.toISOString(),
     };
 
+    console.log('[Identity POST] Returning response:', response);
     return successResponse(response, StatusCodes.CREATED);
   } catch (error) {
-    console.error('[Identity POST]', error);
+    console.error('[Identity POST] Error:', error);
     return handlePrismaError(error);
   }
 }
