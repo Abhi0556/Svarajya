@@ -12,7 +12,6 @@ import { DocumentValidator } from "@/lib/documentValidation";
 
 /**
  * PEHCHAAN: ADD DOCUMENT MODULE
- * Part of the Sva-Rajya Identity Layer
  * Handles visual masking, Aadhaar-specific formatting, and name mismatch logic.
  * Fetches existing documents from /api/identity on mount.
  */
