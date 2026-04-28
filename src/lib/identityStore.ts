@@ -58,6 +58,10 @@ export interface RenewalReminder {
 }
 
 // ——————— Normalize ———————
+/**
+ * INTERN NOTE: Crucial for "Local-First" data integrity. 
+ * Prevents "1234 5678" and "12345678" from being treated as different records.
+ */
 function normalizeDocNumber(raw: string): string {
     return raw.replace(/[\s\-\.]/g, "").toUpperCase();
 }
@@ -70,20 +74,25 @@ export function isLinkableDoc(docType: DocType): boolean {
 }
 
 // ——————— Seal Strength ———————
-// For linkable docs (Aadhaar/PAN/Passport): 5 dimensions × 20 = 100
-// For non-linkable docs (DL/Voter/Other): 4 dimensions × 25 = 100 (no link penalty)
+/**
+ * DYNAMIC SEAL STRENGTH (INTERNSHIP TASK)
+ * For linkable docs (Aadhaar/PAN/Passport): 5 dimensions × 20 = 100
+ * For non-linkable docs (DL/Voter/Other): 4 dimensions × 25 = 100 (no link penalty)
+ */
 export function calcSealStrength(doc: IdentityDoc, links: LinkMapping[]): number {
     const linkable = isLinkableDoc(doc.docType);
-    const weight = linkable ? 20 : 25; // distribute evenly across available dimensions
+    const weight = linkable ? 20 : 25; 
     let score = 0;
 
     if (doc.docNumber) score += weight;                                   // basic doc added
     if (doc.vaultFileId) score += weight;                                 // file uploaded
     if (doc.expiryDate || doc.issueDate || doc.placeOfIssue) score += weight; // deep details
+    
     if (linkable) {
         const docLinks = links.filter(l => l.docId === doc.id);
-        if (docLinks.length > 0) score += weight;                        // at least 1 link
+        if (docLinks.length > 0) score += weight;                         // at least 1 link
     }
+    
     if (doc.verificationStatus !== "not_verified") score += weight;       // verified
 
     return Math.min(score, 100);
@@ -236,10 +245,19 @@ export const IdentityStore = {
     setAnnualKycDate(date: string | null) { _annualKycDate = date; },
 
     // ——— Mask helper ———
+    /**
+     * UPDATED: Aadhaar/PAN specific masking for Indian Fintech compliance.
+     * Shows last 4 for Aadhaar and standard pattern for PAN.
+     */
     maskDocNumber(raw: string, docType: DocType): string {
         if (!raw || raw.length < 4) return raw;
+        const clean = raw.replace(/\s/g, "");
+
+        if (docType === "aadhaar") {
+            return "**** **** " + clean.slice(-4);
+        }
         if (docType === "pan") {
-            return raw.slice(0, 5) + "****" + raw.slice(-1);
+            return clean.slice(0, 5) + "****" + clean.slice(-1);
         }
         return raw.slice(0, 2) + "*".repeat(raw.length - 4) + raw.slice(-2);
     },
