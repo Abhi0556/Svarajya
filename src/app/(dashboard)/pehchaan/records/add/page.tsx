@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, Eye, EyeOff, CheckCircle2, ShieldCheck, Info } from "lucide-react";
+import { ArrowLeft, Eye, EyeOff, CheckCircle2, ShieldCheck, Info, Lock, ExternalLink } from "lucide-react";
 import { IdentityStore, DocType } from "@/lib/identityStore";
-import { OnboardingStore } from "@/lib/onboardingStore";
+import { OnboardingStore } from "@/lib/stores/onboardingStore";
 import { FileUploader } from "@/components/vault/FileUploader";
 import { DocumentValidator } from "@/lib/documentValidation";
 
@@ -14,6 +14,7 @@ import { DocumentValidator } from "@/lib/documentValidation";
  * PEHCHAAN: ADD DOCUMENT MODULE
  * Part of the Sva-Rajya Identity Layer
  * Handles visual masking, Aadhaar-specific formatting, and name mismatch logic.
+ * Fetches existing documents from /api/identity on mount.
  */
 
 const DOC_TYPES: { id: DocType; label: string }[] = [
@@ -25,18 +26,24 @@ const DOC_TYPES: { id: DocType; label: string }[] = [
     { id: "other", label: "Other" },
 ];
 
-interface ExistingDocument {
+interface ApiIdentityRecord {
     id: string;
     idType: string;
     numberMasked: string;
     expiryDate: string | null;
     issuedDate: string | null;
+    createdAt: string;
+    updatedAt: string;
 }
 
 function AddDocumentForm() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const preselectedType = searchParams.get("type") as DocType | null;
+
+    // DB records fetched on load
+    const [dbDocs, setDbDocs] = useState<ApiIdentityRecord[]>([]);
+    const [isLoadingDocs, setIsLoadingDocs] = useState(true);
 
     // Form State
     const [docType, setDocType] = useState<DocType>(preselectedType || "pan");
@@ -45,16 +52,65 @@ function AddDocumentForm() {
     const [nameOnDoc, setNameOnDoc] = useState("");
     const [revealed, setRevealed] = useState(false);
     const [vaultFileId, setVaultFileId] = useState<string | null>(null);
-    
+
     // UI/UX State
     const [error, setError] = useState("");
     const [mismatchReason, setMismatchReason] = useState("");
     const [isSaving, setIsSaving] = useState(false);
     const [saved, setSaved] = useState<{ id: string; strength: number; coverage: any } | null>(null);
 
-    const existingDocs = IdentityStore.getDocs();
+    /**
+     * Fetch all identity records from the database on mount.
+     * This is the source of truth for which doc types already exist.
+     */
+    useEffect(() => {
+        const fetchDocs = async () => {
+            try {
+                const res = await fetch("/api/identity");
+                if (res.ok) {
+                    const json = await res.json();
+                    const records: ApiIdentityRecord[] = json.data || [];
+                    setDbDocs(records);
+
+                    // If a preselected type is already submitted, redirect immediately
+                    if (preselectedType) {
+                        const match = records.find(
+                            (r) => r.idType.toLowerCase() === preselectedType.toLowerCase()
+                        );
+                        if (match) {
+                            router.replace(`/pehchaan/records/doc/${match.id}`);
+                            return;
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error("[AddDocument] Failed to load identity records:", e);
+            } finally {
+                setIsLoadingDocs(false);
+            }
+        };
+        fetchDocs();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    /**
+     * Helper: find a DB record for a given DocType.
+     */
+    const getDbRecord = (type: DocType): ApiIdentityRecord | undefined =>
+        dbDocs.find((r) => r.idType.toLowerCase() === type.toLowerCase());
+
+    const activeDbRecord = getDbRecord(docType);
+    const isViewingExisting = !!activeDbRecord;
+
     const profileName = OnboardingStore.get().fullName || "";
-    const isNameMismatched = nameOnDoc.trim().toLowerCase() !== profileName.trim().toLowerCase() && nameOnDoc.trim().length > 0;
+
+    // Normalize names: trim, lowercase, collapse multiple spaces
+    const normalize = (s: string) => s.trim().toLowerCase().replace(/\s+/g, " ");
+
+    const isNameMismatched =
+        profileName.trim().length > 0 &&
+        nameOnDoc.trim().length > 0 &&
+        normalize(nameOnDoc) !== normalize(profileName);
 
     /**
      * Handles Aadhaar spacing (0000 0000 0000) and general uppercase transformation
@@ -68,24 +124,45 @@ function AddDocumentForm() {
                 setDocNumber(formatted);
             }
         } else {
-            setDocNumber(val.toUpperCase()); 
+            setDocNumber(val.toUpperCase());
         }
     };
 
     /**
-     * Persists the document to the Local-First Identity Store
+     * When user selects a doc type:
+     * - If already submitted → redirect to its detail page.
+     * - Otherwise → clear form and switch type.
+     */
+    const handleSelectType = (type: DocType) => {
+        const existing = getDbRecord(type);
+        if (existing) {
+            router.push(`/pehchaan/records/doc/${existing.id}`);
+            return;
+        }
+        setDocType(type);
+        setDocNumber("");
+        setNameOnDoc("");
+        setMismatchReason("");
+        setError("");
+        const newUrl = new URL(window.location.href);
+        newUrl.searchParams.set("type", type);
+        router.replace(newUrl.pathname + newUrl.search);
+    };
+
+    /**
+     * Persists the document to the Local-First Identity Store + DB
      */
     const handleSave = async () => {
         setError("");
         setIsSaving(true);
-        const cleanNumber = docNumber.replace(/\s/g, ""); 
+        const cleanNumber = docNumber.replace(/\s/g, "");
 
         // 1. Structural Validation
         if (!docType) { setError("Please select a document type."); setIsSaving(false); return; }
-        if (docType === "aadhaar" && cleanNumber.length !== 12) { 
-            setError("Aadhaar must be exactly 12 digits."); 
+        if (docType === "aadhaar" && cleanNumber.length !== 12) {
+            setError("Aadhaar must be exactly 12 digits.");
             setIsSaving(false);
-            return; 
+            return;
         }
         if (docType === "other" && !customDocName.trim()) { setError("Please provide a name for this custom document."); setIsSaving(false); return; }
         if (!cleanNumber.trim()) { setError("Document number is required."); setIsSaving(false); return; }
@@ -101,27 +178,55 @@ function AddDocumentForm() {
         }
 
         try {
-            // 3. Store Injection
+            // 3. API Call - Primary save method
+            const numberMasked = cleanNumber.slice(-4); // Last 4 digits
+            const apiPayload = {
+                idType: docType.toUpperCase(),
+                numberMasked,
+                expiryDate: null,
+                issuedDate: null,
+            };
+
+            const apiResponse = await fetch("/api/identity", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(apiPayload),
+            });
+
+            if (!apiResponse.ok) {
+                const errorData = await apiResponse.json();
+                if (apiResponse.status === 409 || errorData.error?.includes("duplicate") || errorData.error?.includes("already exists")) {
+                    setError("This document type already exists in your vault.");
+                    setIsSaving(false);
+                    return;
+                }
+                throw new Error(errorData.error || "Failed to save document to database");
+            }
+
+            const apiResult = await apiResponse.json();
+
+            // 4. Store Injection - Backward compatibility
             const doc = IdentityStore.addDoc({
                 docType,
                 customDocName: docType === "other" ? customDocName.trim() : undefined,
-                docNumber: cleanNumber, 
+                docNumber: cleanNumber,
                 nameOnDoc: nameOnDoc.trim(),
                 vaultFileId: vaultFileId || undefined,
                 notes: mismatchReason ? `Audit Note: Name mismatch corrected via user input. Reason: ${mismatchReason}` : undefined,
             });
-            
+
             // Artificial delay for high-fidelity feel
             setTimeout(() => {
-                setSaved({ 
-                    id: doc.id, 
-                    strength: doc.vaultFileId ? 45 : 25, 
-                    coverage: IdentityStore.getCoverage() 
+                setSaved({
+                    id: apiResult.data?.id || doc.id,
+                    strength: doc.vaultFileId ? 45 : 25,
+                    coverage: IdentityStore.getCoverage(),
                 });
                 setIsSaving(false);
             }, 800);
-            
+
         } catch (e: any) {
+            console.error("Save error:", e);
             setError(e.message === "DUPLICATE" ? "This document already exists in your Sva-Rajya Vault." : "An error occurred during secure persistence.");
             setIsSaving(false);
         }
@@ -131,16 +236,26 @@ function AddDocumentForm() {
         ? IdentityStore.maskDocNumber(docNumber, docType)
         : docNumber;
 
+    // Loading state
+    if (isLoadingDocs) {
+        return (
+            <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+                <div className="w-8 h-8 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" />
+            </div>
+        );
+    }
+
+    // Success state
     if (saved) {
         return (
             <div className="flex flex-col min-h-screen p-6 items-center justify-center bg-slate-950 text-center relative overflow-hidden">
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-amber-400/5 via-transparent to-transparent opacity-50" />
-                
-                <motion.div initial={{ scale: 0, rotate: -180 }} animate={{ scale: 1, rotate: 0 }} transition={{ type: "spring", damping: 15 }} 
+
+                <motion.div initial={{ scale: 0, rotate: -180 }} animate={{ scale: 1, rotate: 0 }} transition={{ type: "spring", damping: 15 }}
                     className="w-24 h-24 rounded-full bg-emerald-500/10 border-2 border-emerald-500/50 flex items-center justify-center mb-6 relative z-10">
                     <CheckCircle2 className="w-12 h-12 text-emerald-400" />
                 </motion.div>
-                
+
                 <h1 className="text-2xl font-bold text-white relative z-10">Identity Seal Secured</h1>
                 <p className="text-white/40 mt-3 max-w-[280px] relative z-10">
                     Your <span className="text-white font-medium uppercase">{docType}</span> has been encrypted and added to your Pehchaan Vault.
@@ -151,7 +266,7 @@ function AddDocumentForm() {
                         <span className="text-xs text-white/50">Seal Strength</span>
                         <span className="text-amber-400 font-bold">{saved.strength}%</span>
                     </div>
-                    
+
                     <button onClick={() => router.push(`/pehchaan/records/doc/${saved.id}`)} className="w-full bg-amber-400 hover:bg-amber-500 text-black font-bold py-4 rounded-xl transition-all active:scale-95">
                         Enhance This Seal
                     </button>
@@ -182,77 +297,216 @@ function AddDocumentForm() {
                         <ShieldCheck className="w-3 h-3" /> Select Identity Type
                     </label>
                     <div className="flex flex-wrap gap-2">
-                        {DOC_TYPES.map(dt => {
-                            const exists = ["aadhaar", "pan"].includes(dt.id) && existingDocs.some(d => d.docType === dt.id);
+                        {DOC_TYPES.map((dt) => {
+                            const dbRecord = getDbRecord(dt.id);
+                            const isSubmitted = !!dbRecord;
+                            const isActive = docType === dt.id && !isSubmitted;
                             return (
-                                <button key={dt.id} disabled={exists} onClick={() => { setDocType(dt.id); setDocNumber(""); setError(""); }}
-                                    className={`px-5 py-2.5 rounded-xl border text-xs font-medium transition-all ${exists ? "opacity-20 cursor-not-allowed grayscale" : docType === dt.id ? "bg-amber-400/10 border-amber-400 text-amber-400 shadow-[0_0_15px_rgba(201,162,39,0.1)]" : "bg-white/5 border-white/10 text-white/40 hover:border-white/20"}`}>
-                                    {dt.label} {exists && "✓"}
+                                <button
+                                    key={dt.id}
+                                    onClick={() => handleSelectType(dt.id)}
+                                    className={`px-5 py-2.5 rounded-xl border text-xs font-medium transition-all flex items-center gap-1.5
+                                        ${isSubmitted
+                                            ? "bg-emerald-500/10 border-emerald-500/40 text-emerald-400 cursor-pointer hover:bg-emerald-500/20"
+                                            : isActive
+                                                ? "bg-amber-400/10 border-amber-400 text-amber-400 shadow-[0_0_15px_rgba(201,162,39,0.1)]"
+                                                : "bg-white/5 border-white/10 text-white/40 hover:border-white/20"
+                                        }`}
+                                >
+                                    {dt.label}
+                                    {isSubmitted && <span className="text-emerald-400">✓</span>}
                                 </button>
                             );
                         })}
                     </div>
+                    <p className="text-[10px] text-white/20 leading-relaxed">
+                        Documents marked <span className="text-emerald-400">✓</span> are already in your vault. Click to view them.
+                    </p>
                 </section>
 
-                {/* Number Input */}
-                <section className="space-y-4">
-                    <label className="text-[10px] font-bold text-white/30 uppercase tracking-[0.15em]">Document Number</label>
-                    <div className="relative group">
-                        <input type="text" value={revealed ? docNumber : maskedValue} onChange={e => handleNumberChange(e.target.value)} onFocus={() => setRevealed(true)} onBlur={() => setRevealed(false)}
-                            placeholder={docType === "aadhaar" ? "0000 0000 0000" : "Enter identification number"}
-                            className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 pr-14 text-white placeholder-white/10 outline-none focus:border-amber-400/40 transition-all group-hover:border-white/20" />
-                        <button type="button" onClick={() => setRevealed(!revealed)} className="absolute right-5 top-1/2 -translate-y-1/2 text-white/20 hover:text-white/50 transition-colors">
-                            {revealed ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                        </button>
-                    </div>
-                </section>
-
-                {/* Upload Section */}
-                <section className="space-y-4">
-                    <label className="text-[10px] font-bold text-white/30 uppercase tracking-[0.15em]">Official Digital Scan</label>
-                    <FileUploader folder="identity" label="Upload PDF or Image" onUploaded={(id) => setVaultFileId(id)} accept=".pdf,.png,.jpg,.jpeg" />
-                </section>
-
-                {/* Name Mapping */}
-                <section className="space-y-4">
-                    <label className="text-[10px] font-bold text-white/30 uppercase tracking-[0.15em]">Full Name (on Document)</label>
-                    <input type="text" value={nameOnDoc} onChange={e => setNameOnDoc(e.target.value)} placeholder="Exactly as printed"
-                        className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white outline-none focus:border-amber-400/40 transition-all" />
-                    
-                    <AnimatePresence>
-                        {isNameMismatched && (
-                            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} 
-                                className="p-4 bg-amber-500/5 border border-amber-500/20 rounded-2xl overflow-hidden">
-                                <div className="flex items-start gap-3 mb-3">
-                                    <Info className="w-4 h-4 text-amber-400 mt-0.5" />
-                                    <p className="text-[11px] text-amber-200/70 leading-relaxed">The name provided differs from your Foundation Profile. Please provide a reason (e.g., Initials, Marriage) for our record integrity.</p>
+                {/* Read-only view for already-submitted doc type */}
+                <AnimatePresence mode="wait">
+                    {isViewingExisting ? (
+                        <motion.div
+                            key="existing"
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -10 }}
+                            className="space-y-6"
+                        >
+                            {/* Banner */}
+                            <div className="p-4 bg-emerald-500/5 border border-emerald-500/20 rounded-2xl flex items-start gap-3">
+                                <Lock className="w-4 h-4 text-emerald-400 mt-0.5 flex-shrink-0" />
+                                <div>
+                                    <p className="text-[11px] font-semibold text-emerald-300 mb-0.5">Document Already Secured</p>
+                                    <p className="text-[10px] text-white/40 leading-relaxed">
+                                        This document type is already in your Pehchaan Vault. View the full record to make changes.
+                                    </p>
                                 </div>
-                                <input type="text" placeholder="Reason for mismatch..." value={mismatchReason} onChange={e => setMismatchReason(e.target.value)}
-                                    className="w-full bg-black/40 border border-white/5 rounded-xl px-4 py-2.5 text-xs text-white placeholder-white/20 outline-none focus:border-amber-400/30" />
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
-                </section>
+                            </div>
 
-                {error && (
-                    <motion.p initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} className="text-red-400 text-[10px] font-bold uppercase tracking-wider flex items-center gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" /> {error}
-                    </motion.p>
-                )}
+                            {/* Read-only fields */}
+                            <div className="space-y-4">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-bold text-white/30 uppercase tracking-[0.15em]">Document Type</label>
+                                    <div className="w-full bg-white/3 border border-white/8 rounded-2xl px-5 py-4 text-white/60 text-sm font-medium uppercase tracking-wide flex items-center gap-2">
+                                        <Lock className="w-3.5 h-3.5 text-white/20" />
+                                        {activeDbRecord?.idType}
+                                    </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-bold text-white/30 uppercase tracking-[0.15em]">Masked Number (Last 4)</label>
+                                    <div className="w-full bg-white/3 border border-white/8 rounded-2xl px-5 py-4 text-white/60 text-sm font-mono flex items-center gap-2">
+                                        <Lock className="w-3.5 h-3.5 text-white/20" />
+                                        •••• •••• {activeDbRecord?.numberMasked}
+                                    </div>
+                                </div>
+
+                                {activeDbRecord?.issuedDate && (
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-bold text-white/30 uppercase tracking-[0.15em]">Issued Date</label>
+                                        <div className="w-full bg-white/3 border border-white/8 rounded-2xl px-5 py-4 text-white/60 text-sm flex items-center gap-2">
+                                            <Lock className="w-3.5 h-3.5 text-white/20" />
+                                            {new Date(activeDbRecord.issuedDate).toLocaleDateString()}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {activeDbRecord?.expiryDate && (
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-bold text-white/30 uppercase tracking-[0.15em]">Expiry Date</label>
+                                        <div className="w-full bg-white/3 border border-white/8 rounded-2xl px-5 py-4 text-white/60 text-sm flex items-center gap-2">
+                                            <Lock className="w-3.5 h-3.5 text-white/20" />
+                                            {new Date(activeDbRecord.expiryDate).toLocaleDateString()}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* View full record CTA */}
+                            <button
+                                onClick={() => router.push(`/pehchaan/records/doc/${activeDbRecord!.id}`)}
+                                className="w-full bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 font-bold py-4 rounded-2xl transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                            >
+                                <ExternalLink className="w-4 h-4" />
+                                View Full Record
+                            </button>
+                        </motion.div>
+                    ) : (
+                        <motion.div
+                            key="new-form"
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -10 }}
+                            className="space-y-8"
+                        >
+                            {/* Custom name for "other" */}
+                            <AnimatePresence>
+                                {docType === "other" && (
+                                    <motion.section
+                                        initial={{ height: 0, opacity: 0 }}
+                                        animate={{ height: "auto", opacity: 1 }}
+                                        exit={{ height: 0, opacity: 0 }}
+                                        className="space-y-4 overflow-hidden"
+                                    >
+                                        <label className="text-[10px] font-bold text-white/30 uppercase tracking-[0.15em]">Document Name</label>
+                                        <input
+                                            type="text"
+                                            value={customDocName}
+                                            onChange={(e) => setCustomDocName(e.target.value)}
+                                            placeholder="e.g., Birth Certificate, Ration Card"
+                                            className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white placeholder-white/10 outline-none focus:border-amber-400/40 transition-all"
+                                        />
+                                    </motion.section>
+                                )}
+                            </AnimatePresence>
+
+                            {/* Number Input */}
+                            <section className="space-y-4">
+                                <label className="text-[10px] font-bold text-white/30 uppercase tracking-[0.15em]">Document Number</label>
+                                <div className="relative group">
+                                    <input
+                                        type="text"
+                                        value={revealed ? docNumber : maskedValue}
+                                        onChange={(e) => handleNumberChange(e.target.value)}
+                                        onFocus={() => setRevealed(true)}
+                                        onBlur={() => setRevealed(false)}
+                                        placeholder={docType === "aadhaar" ? "0000 0000 0000" : "Enter identification number"}
+                                        className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 pr-14 text-white placeholder-white/10 outline-none focus:border-amber-400/40 transition-all group-hover:border-white/20"
+                                    />
+                                    <button type="button" onClick={() => setRevealed(!revealed)} className="absolute right-5 top-1/2 -translate-y-1/2 text-white/20 hover:text-white/50 transition-colors">
+                                        {revealed ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                                    </button>
+                                </div>
+                            </section>
+
+                            {/* Upload Section */}
+                            <section className="space-y-4">
+                                <label className="text-[10px] font-bold text-white/30 uppercase tracking-[0.15em]">Official Digital Scan</label>
+                                <FileUploader folder="identity" label="Upload PDF or Image" onUploaded={(id) => setVaultFileId(id)} accept=".pdf,.png,.jpg,.jpeg" />
+                            </section>
+
+                            {/* Name Mapping */}
+                            <section className="space-y-4">
+                                <label className="text-[10px] font-bold text-white/30 uppercase tracking-[0.15em]">Full Name (on Document)</label>
+                                <input
+                                    type="text"
+                                    value={nameOnDoc}
+                                    onChange={(e) => setNameOnDoc(e.target.value)}
+                                    placeholder="Exactly as printed"
+                                    className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white outline-none focus:border-amber-400/40 transition-all"
+                                />
+
+                                <AnimatePresence>
+                                    {isNameMismatched && (
+                                        <motion.div
+                                            initial={{ height: 0, opacity: 0 }}
+                                            animate={{ height: "auto", opacity: 1 }}
+                                            exit={{ height: 0, opacity: 0 }}
+                                            className="p-4 bg-amber-500/5 border border-amber-500/20 rounded-2xl overflow-hidden"
+                                        >
+                                            <div className="flex items-start gap-3 mb-3">
+                                                <Info className="w-4 h-4 text-amber-400 mt-0.5" />
+                                                <p className="text-[11px] text-amber-200/70 leading-relaxed">The name provided differs from your Foundation Profile. Please provide a reason (e.g., Initials, Marriage) for our record integrity.</p>
+                                            </div>
+                                            <input
+                                                type="text"
+                                                placeholder="Reason for mismatch..."
+                                                value={mismatchReason}
+                                                onChange={(e) => setMismatchReason(e.target.value)}
+                                                className="w-full bg-black/40 border border-white/5 rounded-xl px-4 py-2.5 text-xs text-white placeholder-white/20 outline-none focus:border-amber-400/30"
+                                            />
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+                            </section>
+
+                            {error && (
+                                <motion.p initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} className="text-red-400 text-[10px] font-bold uppercase tracking-wider flex items-center gap-2">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" /> {error}
+                                </motion.p>
+                            )}
+                        </motion.div>
+                    )}
+                </AnimatePresence>
             </div>
 
-            <footer className="mt-auto pt-10 sticky bottom-0 bg-slate-950/80 backdrop-blur-md pb-6">
-                <button onClick={handleSave} disabled={isSaving} className="w-full bg-amber-400 disabled:opacity-50 disabled:grayscale text-slate-950 font-bold py-5 rounded-2xl shadow-[0_10px_30px_rgba(201,162,39,0.15)] active:scale-[0.98] transition-all flex items-center justify-center gap-3">
-                    {isSaving ? (
-                        <>
-                            <div className="w-5 h-5 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />
-                            Encrypting Seal...
-                        </>
-                    ) : (
-                        "Verify & Secure Seal"
-                    )}
-                </button>
-            </footer>
+            {/* Footer CTA — only shown for new documents */}
+            {!isViewingExisting && (
+                <footer className="mt-auto pt-10 sticky bottom-0 bg-slate-950/80 backdrop-blur-md pb-6">
+                    <button onClick={handleSave} disabled={isSaving} className="w-full bg-amber-400 disabled:opacity-50 disabled:grayscale text-slate-950 font-bold py-5 rounded-2xl shadow-[0_10px_30px_rgba(201,162,39,0.15)] active:scale-[0.98] transition-all flex items-center justify-center gap-3">
+                        {isSaving ? (
+                            <>
+                                <div className="w-5 h-5 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />
+                                Encrypting Seal...
+                            </>
+                        ) : (
+                            "Verify & Secure Seal"
+                        )}
+                    </button>
+                </footer>
+            )}
         </div>
     );
 }

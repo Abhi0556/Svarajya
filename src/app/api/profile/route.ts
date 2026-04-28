@@ -30,7 +30,7 @@ async function getHandler(request: NextRequest): Promise<NextResponse> {
 
     if (!user) {
       // Self-heal: Create Prisma user if missing
-      await userService.syncUserWithSupabase(authContext.userId, authContext.email, '');
+      await userService.syncUserWithSupabase(authContext.userId, authContext.email || '', '');
       user = await userService.getUserWithProfile(authContext.userId);
       
       if (!user) {
@@ -81,7 +81,7 @@ async function postHandler(request: NextRequest): Promise<NextResponse> {
   try {
     data = await request.json();
   } catch (e) {
-    return errorResponse(ErrorCodes.BAD_REQUEST, 'Invalid JSON', StatusCodes.BAD_REQUEST);
+    return errorResponse(ErrorCodes.VALIDATION_ERROR, 'Invalid JSON', StatusCodes.BAD_REQUEST);
   }
 
   // Check for internal secret to allow unauthenticated user creation (signup sync)
@@ -99,7 +99,7 @@ async function postHandler(request: NextRequest): Promise<NextResponse> {
   // If internal sync bypass, mock the authContext
   if (!authContext && isInternalSync) {
     if (!data.id) {
-      return errorResponse(ErrorCodes.BAD_REQUEST, 'User ID required for internal sync', StatusCodes.BAD_REQUEST);
+      return errorResponse(ErrorCodes.VALIDATION_ERROR, 'User ID required for internal sync', StatusCodes.BAD_REQUEST);
     }
     authContext = {
       userId: data.id,
