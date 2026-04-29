@@ -3,7 +3,7 @@
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { ChevronRight, Info } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 export default function RajyaNirmaanIntro() {
     const router = useRouter();
@@ -34,20 +34,29 @@ export default function RajyaNirmaanIntro() {
         markOnboardingStarted();
     }, []);
 
-    // Completely disable browser back button on intro page
-    useEffect(() => {
-        // Replace current history entry so there's nothing to go "back" to
-        window.history.replaceState({ introLock: true }, "", window.location.href);
-        // Push one extra state as a trap for back-button presses
-        window.history.pushState({ introLock: true }, "", window.location.href);
+    // Disable browser back button on intro page without affecting normal CTA navigation.
+    const allowNavRef = useRef(false);
 
-        const handlePopState = () => {
-            // Immediately re-push state to neutralize the back navigation
-            window.history.pushState({ introLock: true }, "", window.location.href);
+    useEffect(() => {
+        const lockKey = "introLock";
+
+        // Ensure a locked entry exists so there's nowhere meaningful to go back to
+        if (!window.history.state?.[lockKey]) {
+            window.history.replaceState({ [lockKey]: true }, "", window.location.href);
+            window.history.pushState({ [lockKey]: true }, "", window.location.href);
+        }
+
+        const handlePopState = (event: PopStateEvent) => {
+            // Allow one programmatic navigation through
+            if (allowNavRef.current) {
+                allowNavRef.current = false;
+                return;
+            }
+            // Otherwise re-lock the history so back doesn't leave this page
+            window.history.pushState({ [lockKey]: true }, "", window.location.href);
         };
 
         window.addEventListener("popstate", handlePopState);
-
         return () => {
             window.removeEventListener("popstate", handlePopState);
         };
@@ -55,6 +64,7 @@ export default function RajyaNirmaanIntro() {
 
     // Use replace instead of push when navigating away
     const handleStartBuilding = () => {
+        allowNavRef.current = true;
         router.replace("/onboarding/name");
     };
 
