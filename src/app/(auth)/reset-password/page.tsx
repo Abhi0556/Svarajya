@@ -51,7 +51,7 @@ export default function ResetPasswordPage() {
             setError("Password must contain at least one number.");
             return;
         }
-        if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
+        if (!/[!@#$%^&*(),.?":{}|<>_-]/.test(password)) {
             setError("Password must contain at least one special character.");
             return;
         }
@@ -198,8 +198,8 @@ export default function ResetPasswordPage() {
                                             <span className={/\d/.test(password) ? "text-emerald-400/90" : "text-white/40"}>Contains at least one number</span>
                                         </div>
                                         <div className="flex items-center gap-2 text-xs">
-                                            {/[!@#$%^&*(),.?":{}|<>]/.test(password) ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <X className="w-3.5 h-3.5 text-red-500/70" />}
-                                            <span className={/[!@#$%^&*(),.?":{}|<>]/.test(password) ? "text-emerald-400/90" : "text-white/40"}>Contains a special character</span>
+                                            {/[!@#$%^&*(),.?":{}|<>_-]/.test(password) ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <X className="w-3.5 h-3.5 text-red-500/70" />}
+                                            <span className={/[!@#$%^&*(),.?":{}|<>_-]/.test(password) ? "text-emerald-400/90" : "text-white/40"}>Contains a special character</span>
                                         </div>
                                     </div>
                                 </div>
