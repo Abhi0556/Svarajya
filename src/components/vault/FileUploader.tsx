@@ -38,22 +38,72 @@ export function FileUploader({
     const supabase = createClient();
 
     const handleFile = async (file: File) => {
+        // 1. Validate File Size (Max 2MB)
+        if (file.size > 2 * 1024 * 1024) {
+            alert("File size exceeds 2MB limit.");
+            return;
+        }
+
+        // 2. Validate File Type
+        const allowedTypes = ["image/jpeg", "image/png", "application/pdf"];
+        if (!allowedTypes.includes(file.type)) {
+            alert("Unsupported file type. Please upload JPEG, PNG, or PDF.");
+            return;
+        }
+
         setUploading(true);
+        
         // Generate local preview for images
         if (file.type.startsWith("image/")) {
             setPreview(URL.createObjectURL(file));
         }
-        const id = await Vault.saveFile(folder, file, tags);
-        setUploaded({ name: file.name, id });
-        setDocName(file.name);
-        setSavedFileObj(file);
-        setUploading(false);
-        onUploaded?.(id, file.name);
+
+        try {
+            let id: string;
+
+            // 3. Check if we should upload to Supabase Storage
+            if (folder === "identity" || folder === "education") {
+                const { data: { user } } = await supabase.auth.getUser();
+                if (!user) throw new Error("Authentication required for remote storage.");
+
+                const fileExt = file.name.split(".").pop();
+                const fileName = `${user.id}-${Date.now()}.${fileExt}`;
+                const filePath = `${fileName}`;
+
+                const { error: uploadError } = await supabase.storage
+                    .from(folder) // "identity" or "education" bucket
+                    .upload(filePath, file);
+
+                if (uploadError) throw uploadError;
+
+                const { data: urlData } = supabase.storage
+                    .from(folder)
+                    .getPublicUrl(filePath);
+                
+                id = urlData.publicUrl;
+            } else {
+                // Fallback to Local Vault (IndexedDB + OPFS)
+                id = await Vault.saveFile(folder, file, tags);
+            }
+
+            setUploaded({ name: file.name, id });
+            setDocName(file.name);
+            setSavedFileObj(file);
+            onUploaded?.(id, file.name);
+        } catch (err: any) {
+            console.error("Upload failed:", err);
+            alert(`Upload failed: ${err.message || "Unknown error"}`);
+        } finally {
+            setUploading(false);
+        }
     };
 
     const handleSaveDetails = async () => {
         if (!uploaded) return;
-        await Vault.updateFile(uploaded.id, { name: docName, notes: docNotes });
+        // Only update local metadata if it's a local file (id starts with opfs or is internal)
+        if (!uploaded.id.startsWith("http")) {
+            await Vault.updateFile(uploaded.id, { name: docName, notes: docNotes });
+        }
         setDetailsSaved(true);
         onUploaded?.(uploaded.id, docName);
     };

@@ -871,7 +871,7 @@ model User {
   updatedAt         DateTime    @updatedAt
   lastActiveAt      DateTime?
   deviceInfo        Json?
-  settings          Json? @default("{}")
+  settings  Json?
 
   // Relations
   sessions          UserSession[]
@@ -982,6 +982,7 @@ model Education {
   yearCompleted   Int?
   specialization  String?
   linkedLoanId    String? // If education loan exists
+  certificateUrl  String?
   createdAt       DateTime  @default(now())
 
   user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)

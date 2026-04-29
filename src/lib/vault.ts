@@ -120,8 +120,10 @@ export const Vault = {
         return counts as Record<VaultFolder, number>;
     },
 
-    /** Generate a data URL for previewing image blobs. */
+    /** Generate a data URL for previewing image blobs or return remote URL directly. */
     async getPreviewUrl(id: string): Promise<string | null> {
+        if (id.startsWith("http")) return id;
+        
         const db = await getDB();
         const file = await db.get("vault", id);
         if (!file || !file.vaultFileId) return null;

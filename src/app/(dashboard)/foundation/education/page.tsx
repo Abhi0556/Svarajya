@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
-import { BookOpen, ShieldAlert, CheckCircle2, ArrowLeft, Upload, Plus, GraduationCap } from "lucide-react";
+import { BookOpen, ShieldAlert, CheckCircle2, ArrowLeft, Upload, Plus, GraduationCap, Trash2 } from "lucide-react";
 import { FileUploader } from "@/components/vault/FileUploader";
 import { VideoTutorialPlaceholder } from "@/components/ui/VideoTutorialPlaceholder";
 import { OnboardingStore } from "@/lib/stores/onboardingStore";
@@ -11,6 +11,7 @@ import { Vault } from "@/lib/vault";
 import { useToast } from "@/components/providers/ToastProvider";
 
 interface EducationEntry {
+    id?: string;
     degree: string;
     institution: string;
     year: string;
@@ -36,8 +37,11 @@ export default function EducationPage() {
     const [year, setYear] = useState("");
     const [specialization, setSpecialization] = useState("");
     const [hasLoan, setHasLoan] = useState(false);
-    const [uploadedCerts, setUploadedCerts] = useState<string[]>([]);
+    const [uploadedCerts, setUploadedCerts] = useState<Record<string, string>>({}); // Mapping of entry index/id to certificate URL
     const [isLoading, setIsLoading] = useState(true);
+    const [isDeleting, setIsDeleting] = useState<string | null>(null); // Stores ID of entry being deleted
+    const [isSaving, setIsSaving] = useState(false);
+    const [yearError, setYearError] = useState("");
     const toast = useToast();
 
     useEffect(() => {
@@ -50,12 +54,13 @@ export default function EducationPage() {
                     const profileData = json?.data;
                     if (profileData?.education && profileData.education.length > 0) {
                         const loadedEntries = profileData.education.map((edu: any) => ({
+                            id: edu.id,
                             degree: edu.degree || "",
                             institution: edu.institute || edu.institution || "",
                             year: edu.yearCompleted ? edu.yearCompleted.toString() : "",
                             specialization: edu.specialization || "",
-                            hasLoan: edu.linkedLoanId === "has_loan",
-                            certificateId: undefined, // Update logic if cert IDs are tracked
+                            hasLoan: !!edu.linkedLoanId,
+                            certificateId: edu.certificateUrl || undefined,
                         }));
                         setEntries(loadedEntries);
                         setShowForm(false);
@@ -75,40 +80,85 @@ export default function EducationPage() {
         fetchEducation();
     }, []);
 
+    const handleYearChange = (val: string) => {
+        setYear(val);
+        setYearError("");
+        if (val) {
+            const certYear = parseInt(val);
+            const currentYear = new Date().getFullYear();
+            if (isNaN(certYear) || certYear > currentYear || certYear < 1900) {
+                setYearError(`Year must be between 1900 and ${currentYear}`);
+            }
+        }
+    };
+
     const handleAddEntry = () => {
         if (!degree || !institution) return;
+        if (yearError) return;
 
         if (year) {
             const certYear = parseInt(year);
-            const currentYear = new Date().getFullYear();
-            if (certYear > currentYear) {
-                toast("Certificate year cannot be in the future.", "error");
-                return;
-            }
-            if (certYear < 1900) {
-                toast("Certificate year seems invalid.", "error");
-                return;
-            }
             const userDobStr = OnboardingStore.get().dob;
             if (userDobStr) {
                 const birthYear = new Date(userDobStr).getFullYear();
                 if (certYear <= birthYear) {
-                    toast("Certificate year must be after your birth year.", "error");
+                    setYearError("Year must be after your birth year");
                     return;
                 }
             }
         }
 
-        const entry: EducationEntry = { degree, institution, year, specialization, hasLoan, certificateId: uploadedCerts[0] };
+        const entry: EducationEntry = {
+            degree,
+            institution,
+            year,
+            specialization,
+            hasLoan,
+            certificateId: uploadedCerts["new"]
+        };
         setEntries([...entries, entry]);
+
         // Reset form
         setDegree("");
         setInstitution("");
         setYear("");
         setSpecialization("");
         setHasLoan(false);
-        setUploadedCerts([]);
+        setUploadedCerts(prev => {
+            const next = { ...prev };
+            delete next["new"];
+            return next;
+        });
+        setYearError("");
         setShowForm(false);
+    };
+
+    const handleDeleteEntry = async (id: string | undefined, index: number) => {
+        // If no database ID, it's a local entry not yet saved
+        if (!id || id.startsWith('local-')) {
+            setEntries(entries.filter((_, i) => i !== index));
+            setIsDeleting(null);
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/education/${id}`, {
+                method: "DELETE",
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(errorText || "Failed to delete");
+            }
+
+            setEntries(entries.filter((_, i) => i !== index));
+            toast("Qualification removed successfully.", "success");
+        } catch (error) {
+            console.error("Delete error:", error);
+            toast("Failed to delete qualification. Please try again.", "error");
+        } finally {
+            setIsDeleting(null);
+        }
     };
 
     const handleViewCert = async (certId: string) => {
@@ -121,22 +171,30 @@ export default function EducationPage() {
     };
 
     const handleFinish = async () => {
+        setIsSaving(true);
         try {
             const response = await fetch('/api/profile', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    education: entries,
+                    education: entries.map(e => ({
+                        ...e,
+                        institute: e.institution,
+                        yearCompleted: e.year ? parseInt(e.year) : undefined,
+                        certificateUrl: e.certificateId
+                    })),
                 }),
             });
-            
+
             if (!response.ok) throw new Error("Failed to save education");
-            
+
             toast("Education saved successfully", "success");
             router.push("/rajya");
         } catch (error) {
             console.error("Save error:", error);
             toast("Failed to save education. Please try again.", "error");
+        } finally {
+            setIsSaving(false);
         }
     };
 
@@ -188,11 +246,11 @@ export default function EducationPage() {
                     {entries.map((e, i) => (
                         <div key={i} className="bg-white/5 border border-white/10 rounded-xl p-4 relative group">
                             <button
-                                onClick={() => setEntries(entries.filter((_, index) => index !== i))}
+                                onClick={() => setIsDeleting(e.id || `local-${i}`)}
                                 className="absolute top-3 right-3 text-white/30 hover:text-red-400 transition-colors"
                                 title="Remove qualification"
                             >
-                                ✕
+                                <Trash2 className="w-4 h-4" />
                             </button>
                             <div className="flex items-center gap-2 mb-1">
                                 <GraduationCap className="w-4 h-4 text-[var(--color-rajya-accent)]" />
@@ -201,9 +259,18 @@ export default function EducationPage() {
                             <p className="text-xs text-[var(--color-rajya-muted)]">{e.institution}{e.year ? ` • ${e.year}` : ""}</p>
                             {e.specialization && <p className="text-[10px] text-[var(--color-rajya-muted)]/60 mt-0.5">{e.specialization}</p>}
                             {e.certificateId && (
-                                <button type="button" onClick={() => handleViewCert(e.certificateId!)} className="mt-2 text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded flex items-center gap-1 hover:bg-emerald-500/20 transition-colors">
-                                    <CheckCircle2 className="w-3 h-3" /> View Local Vault Image
-                                </button>
+                                <div className="mt-2 flex flex-col gap-1">
+                                    <p className="text-[9px] text-white/30 truncate max-w-[200px]">
+                                        {e.certificateId.split('/').pop()}
+                                    </p>
+                                    <button
+                                        type="button"
+                                        onClick={() => handleViewCert(e.certificateId!)}
+                                        className="w-fit text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded flex items-center gap-1 hover:bg-emerald-500/20 transition-colors"
+                                    >
+                                        <CheckCircle2 className="w-3 h-3" /> View Certificate
+                                    </button>
+                                </div>
                             )}
                             {e.hasLoan && (
                                 <span className="mt-2 inline-block text-[10px] bg-[var(--color-rajya-danger)]/10 text-[var(--color-rajya-danger)] border border-[var(--color-rajya-danger)]/20 px-2 py-0.5 rounded-full">
@@ -257,12 +324,13 @@ export default function EducationPage() {
                             <div>
                                 <label className="text-xs text-[var(--color-rajya-muted)] mb-1 block">Year</label>
                                 <input
-                                    type="text"
+                                    type="number"
                                     value={year}
-                                    onChange={e => setYear(e.target.value)}
+                                    onChange={e => handleYearChange(e.target.value)}
                                     placeholder="e.g. 2020"
-                                    className="w-full px-3 py-3 bg-white/5 border border-white/10 rounded-xl text-[var(--color-rajya-text)] text-sm focus:border-[var(--color-rajya-accent)]/50 focus:outline-none placeholder-white/20"
+                                    className={`w-full px-3 py-3 bg-white/5 border ${yearError ? "border-red-500/50" : "border-white/10"} rounded-xl text-[var(--color-rajya-text)] text-sm focus:border-[var(--color-rajya-accent)]/50 focus:outline-none placeholder-white/20`}
                                 />
+                                {yearError && <p className="text-[10px] text-red-400 mt-1">{yearError}</p>}
                             </div>
                             <div>
                                 <label className="text-xs text-[var(--color-rajya-muted)] mb-1 block">Specialization</label>
@@ -300,7 +368,7 @@ export default function EducationPage() {
                             <FileUploader
                                 folder="education"
                                 label="Upload certificate"
-                                onUploaded={(url) => setUploadedCerts([...uploadedCerts, url || "cert"])}
+                                onUploaded={(url) => setUploadedCerts(prev => ({ ...prev, "new": url || "" }))}
                             />
                         </div>
 
@@ -308,7 +376,7 @@ export default function EducationPage() {
                         <div className="grid grid-cols-2 gap-3">
                             <button
                                 onClick={handleAddEntry}
-                                disabled={!degree || !institution}
+                                disabled={!degree || !institution || !!yearError}
                                 className="bg-[var(--color-rajya-accent)] text-black font-semibold py-3 rounded-xl text-sm disabled:opacity-40"
                             >
                                 Save Qualification
@@ -358,11 +426,55 @@ export default function EducationPage() {
             {entries.length > 0 && !showForm && (
                 <button
                     onClick={handleFinish}
-                    className="w-full bg-[var(--color-rajya-accent)] text-black py-4 rounded-xl font-semibold text-sm mt-auto"
+                    disabled={isSaving}
+                    className="w-full bg-[var(--color-rajya-accent)] text-black py-4 rounded-xl font-semibold text-sm mt-auto disabled:opacity-50"
                 >
-                    Save & Continue to Dashboard
+                    {isSaving ? "Saving..." : "Save & Continue to Dashboard"}
                 </button>
             )}
+
+            {/* Delete Confirmation Modal */}
+            <AnimatePresence>
+                {isDeleting && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/80 backdrop-blur-sm"
+                    >
+                        <motion.div
+                            initial={{ scale: 0.9, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.9, opacity: 0 }}
+                            className="w-full max-w-xs bg-slate-900 border border-white/10 rounded-2xl p-6 shadow-2xl"
+                        >
+                            <ShieldAlert className="w-12 h-12 text-red-500 mx-auto mb-4" />
+                            <h3 className="text-lg font-bold text-white text-center mb-2">Delete Qualification?</h3>
+                            <p className="text-xs text-white/40 text-center mb-6">
+                                This action cannot be undone. This qualification will be removed from your profile.
+                            </p>
+                            <div className="flex flex-col gap-2">
+                                <button
+                                    onClick={() => {
+                                        const entryIndex = entries.findIndex((_, idx) => (`local-${idx}`) === isDeleting || entries[idx].id === isDeleting);
+                                        const entry = entries[entryIndex];
+                                        handleDeleteEntry(entry?.id, entryIndex);
+                                    }}
+                                    className="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-3 rounded-xl text-sm transition-colors"
+                                >
+                                    Yes, Delete
+                                </button>
+                                <button
+                                    onClick={() => setIsDeleting(null)}
+                                    className="w-full bg-white/5 hover:bg-white/10 text-white/60 py-3 rounded-xl text-sm transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 }
