@@ -225,7 +225,7 @@ function HeroSection({ onCreateSvarajya }: { onCreateSvarajya: () => void }) {
                   </svg>
                 </div>
 
-                <div className="relative z-10 grid grid-cols-2 gap-4 h-full">
+                <div className="relative z-15 grid grid-cols-2 gap-4 h-full">
                   {[
                     { icon: Shield, label: 'Fort', color: 'palm-green', progress: 45 },
                     { icon: Wallet, label: 'Matka', color: 'river-teal', progress: 68 },
@@ -265,7 +265,7 @@ function HeroSection({ onCreateSvarajya }: { onCreateSvarajya: () => void }) {
                 initial={{ opacity: 0, x: 20, y: -20 }}
                 animate={{ opacity: 1, x: 0, y: 0 }}
                 transition={{ delay: 1.2 }}
-                className="absolute -right-4 top-8 bg-card-white rounded-xl p-4 shadow-xl border border-parchment-dark/20"
+                className="relative right-0 top-2 w-[180px] bg-card-white rounded-xl p-4 shadow-xl border border-parchment-dark/20"
               >
                 <div className="flex items-center gap-3">
                   <Badge icon="Crown" earned size="sm" />
@@ -281,7 +281,7 @@ function HeroSection({ onCreateSvarajya }: { onCreateSvarajya: () => void }) {
                 initial={{ opacity: 0, x: -20, y: 20 }}
                 animate={{ opacity: 1, x: 0, y: 0 }}
                 transition={{ delay: 1.4 }}
-                className="absolute -left-4 bottom-8 bg-card-white rounded-xl p-4 shadow-xl border border-parchment-dark/20"
+                className="relative left-48 bottom-17 w-[180px] h-[78] bg-card-white rounded-xl p-4 shadow-xl border border-parchment-dark/20"
               >
                 <div className="flex items-center gap-3">
                   <ProgressRing progress={78} size={48} strokeWidth={4} />

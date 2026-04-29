@@ -633,7 +633,7 @@ export default function AuthGateway() {
                             <div className="w-8 h-8 rounded-lg bg-white/6 border border-white/10 flex items-center justify-center text-[#f2faf5]/90">
                                 {t.icon}
                             </div>
-                            <span className="text-[9px] text-[#f2faf5] text-center leading-tight max-w-[56px]">{t.label}</span>
+                            <span className="text-[9px] text-[#f2faf5] text-center leading-tight ">{t.label}</span>
                         </div>
                     ))}
                 </div>
