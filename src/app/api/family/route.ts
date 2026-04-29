@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+
+export const dynamic = 'force-dynamic';
 import { familyService } from '@/lib/services/familyService';
 import { withAuth, getAuthContext, AuthLevel } from '@/lib/middleware/auth.middleware';
 import { withErrorHandler } from '@/lib/middleware/error.middleware';
@@ -118,5 +120,59 @@ async function postHandler(request: NextRequest): Promise<NextResponse> {
   }
 }
 
+/**
+ * DELETE /api/family
+ * Delete a family member by ID from query parameter
+ */
+async function deleteHandler(request: NextRequest): Promise<NextResponse> {
+  const authContext = getAuthContext(request);
+  if (!authContext) {
+    return errorResponse(
+      ErrorCodes.UNAUTHORIZED,
+      'Authentication required',
+      StatusCodes.UNAUTHORIZED
+    );
+  }
+
+  // Get id from query parameter
+  const { searchParams } = new URL(request.url);
+  const id = searchParams.get('id');
+
+  if (!id) {
+    return errorResponse(
+      ErrorCodes.VALIDATION_ERROR,
+      'Family member ID is required',
+      StatusCodes.UNPROCESSABLE_ENTITY
+    );
+  }
+
+  try {
+    const result = await familyService.deleteForUser(id, authContext.userId);
+    
+    if (!result.success) {
+      const status = result.reason === 'NOT_FOUND' ? StatusCodes.NOT_FOUND : StatusCodes.FORBIDDEN;
+      const message = result.reason === 'NOT_FOUND' 
+        ? `Family member with ID ${id} not found in database.`
+        : `Permission denied. You do not own the record with ID ${id}.`;
+        
+      return errorResponse(
+        result.reason === 'NOT_FOUND' ? ErrorCodes.NOT_FOUND : ErrorCodes.FORBIDDEN,
+        message,
+        status
+      );
+    }
+    
+    return successResponse({ message: 'Family member deleted successfully' });
+  } catch (error: any) {
+    console.error('[Family DELETE] Error:', error);
+    return errorResponse(
+      ErrorCodes.DATABASE_ERROR,
+      `Database error: ${error.message || 'Unknown error'}`,
+      StatusCodes.INTERNAL_ERROR
+    );
+  }
+}
+
 export const GET = withAuth(withErrorHandler(getHandler), AuthLevel.AUTHENTICATED);
 export const POST = withAuth(withErrorHandler(postHandler), AuthLevel.AUTHENTICATED);
+export const DELETE = withAuth(withErrorHandler(deleteHandler), AuthLevel.AUTHENTICATED);

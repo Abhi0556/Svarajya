@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Bell, BellOff, Calendar } from "lucide-react";
 import { IdentityStore, DocType } from "@/lib/identityStore";
@@ -9,15 +9,38 @@ const REMINDER_OPTIONS = [90, 60, 30, 7];
 
 export default function Renewals() {
     const router = useRouter();
-    const docs = IdentityStore.getDocs();
-    const reminders = IdentityStore.getReminders();
-    const annualDate = IdentityStore.getAnnualKycDate();
-
+    const [docs, setDocs] = useState<any[]>([]);
+    const [reminders, setReminders] = useState<any[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
     const [reminderModal, setReminderModal] = useState<string | null>(null);
-    const [annualKyc, setAnnualKyc] = useState(annualDate || "");
+    const [annualKyc, setAnnualKyc] = useState("");
     const [toast, setToast] = useState("");
-
     const [now] = useState(() => Date.now());
+
+    const fetchData = async () => {
+        setIsLoading(true);
+        try {
+            const [docsRes, remRes] = await Promise.all([
+                fetch('/api/identity'),
+                fetch('/api/identity/reminders')
+            ]);
+
+            if (docsRes.ok && remRes.ok) {
+                const docsData = await docsRes.json();
+                const remData = await remRes.json();
+                setDocs(docsData.data || []);
+                setReminders(remData.data || []);
+            }
+        } catch (error) {
+            console.error('Failed to fetch renewals data:', error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchData();
+    }, []);
 
     const docsWithExpiry = docs.filter(d => d.expiryDate).sort((a, b) => new Date(a.expiryDate!).getTime() - new Date(b.expiryDate!).getTime());
     const docsNoExpiry = docs.filter(d => !d.expiryDate);
@@ -34,23 +57,47 @@ export default function Renewals() {
         return { bg: "bg-emerald-500/10", border: "border-emerald-500/30", text: "text-emerald-400", dot: "bg-emerald-500" };
     };
 
-    const handleSetReminder = (docId: string, days: number) => {
-        IdentityStore.addReminder(docId, days);
-        setReminderModal(null);
-        setToast("Reminder Scheduled");
-        setTimeout(() => setToast(""), 2000);
+    const handleSetReminder = async (docId: string, days: number) => {
+        const doc = docs.find(d => d.id === docId);
+        if (!doc) return;
+
+        try {
+            const res = await fetch('/api/identity/reminders', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    linkedEntityId: docId,
+                    targetDate: doc.expiryDate,
+                    leadTime: days,
+                    message: `${doc.idType.toUpperCase()} expires on ${doc.expiryDate}`
+                })
+            });
+
+            if (res.ok) {
+                const newRem = await res.json();
+                setReminders(prev => {
+                    const filtered = prev.filter(r => r.linkedEntityId !== docId);
+                    return [...filtered, newRem.data];
+                });
+                setReminderModal(null);
+                setToast("Reminder Scheduled");
+                setTimeout(() => setToast(""), 2000);
+            }
+        } catch (error) {
+            console.error('Failed to set reminder:', error);
+        }
     };
 
     const handleAnnualKyc = (date: string) => {
         setAnnualKyc(date);
-        IdentityStore.setAnnualKycDate(date || null);
+        // Annual KYC not yet implemented in API, keeping local for now
         if (date) {
             setToast("Annual KYC date set");
             setTimeout(() => setToast(""), 2000);
         }
     };
 
-    const hasReminder = (docId: string) => reminders.some(r => r.docId === docId);
+    const hasReminder = (docId: string) => reminders.some(r => r.linkedEntityId === docId);
 
     return (
         <div className="flex flex-col min-h-screen p-6 pb-24 relative">
@@ -99,8 +146,8 @@ export default function Renewals() {
                                         <div className={`flex-1 ${color.bg} border ${color.border} rounded-xl p-4 mb-1`}>
                                             <div className="flex items-start justify-between">
                                                 <div>
-                                                    <p className="text-sm font-medium text-white">{doc.docType.toUpperCase()}</p>
-                                                    <p className="text-xs text-white/40 mt-0.5">{IdentityStore.maskDocNumber(doc.docNumber, doc.docType as DocType)}</p>
+                                                    <p className="text-sm font-medium text-white">{doc.idType.toUpperCase()}</p>
+                                                    <p className="text-xs text-white/40 mt-0.5">•••• {doc.numberMasked}</p>
                                                 </div>
                                                 <span className={`text-xs font-semibold ${color.text}`}>
                                                     {days > 0 ? `${days} days` : "Expired"}
@@ -139,8 +186,8 @@ export default function Renewals() {
                             {docsNoExpiry.map(doc => (
                                 <div key={doc.id} className="bg-white/5 border border-white/10 rounded-xl p-3 flex items-center justify-between">
                                     <div>
-                                        <p className="text-sm text-white/60">{doc.docType.toUpperCase()}</p>
-                                        <p className="text-xs text-white/30">{IdentityStore.maskDocNumber(doc.docNumber, doc.docType as DocType)}</p>
+                                        <p className="text-sm text-white/60">{doc.idType.toUpperCase()}</p>
+                                        <p className="text-xs text-white/30">•••• {doc.numberMasked}</p>
                                     </div>
                                     <span className="text-[10px] text-white/20 uppercase">No expiry</span>
                                 </div>

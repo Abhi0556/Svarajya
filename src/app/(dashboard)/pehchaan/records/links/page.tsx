@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Trash2, Link2, Plus } from "lucide-react";
 import { IdentityStore, DocType } from "@/lib/identityStore";
@@ -11,38 +11,73 @@ const SERVICE_EMOJIS: Record<string, string> = {
 
 export default function LinksListPage() {
     const router = useRouter();
-    const links = IdentityStore.getLinks();
-    const docs = IdentityStore.getDocs();
-    const contacts = IdentityStore.getContacts();
+    const [links, setLinks] = useState<any[]>([]);
+    const [docs, setDocs] = useState<any[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
     const [deleteId, setDeleteId] = useState<string | null>(null);
     const [toast, setToast] = useState("");
 
-    // Group links by document
-    const groupedByDoc: Record<string, typeof links> = {};
+    const fetchData = async () => {
+        setIsLoading(true);
+        try {
+            const [linksRes, docsRes] = await Promise.all([
+                fetch('/api/identity/links'),
+                fetch('/api/identity')
+            ]);
+
+            if (linksRes.ok && docsRes.ok) {
+                const linksData = await linksRes.json();
+                const docsData = await docsRes.json();
+                setLinks(linksData.data || []);
+                setDocs(docsData.data || []);
+            }
+        } catch (error) {
+            console.error('Failed to fetch links:', error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchData();
+    }, []);
+
+    // Group links by identity document
+    const groupedByDoc: Record<string, any[]> = {};
     for (const link of links) {
-        if (!groupedByDoc[link.docId]) groupedByDoc[link.docId] = [];
-        groupedByDoc[link.docId].push(link);
+        if (!groupedByDoc[link.identityId]) groupedByDoc[link.identityId] = [];
+        groupedByDoc[link.identityId].push(link);
     }
 
-    const getDocLabel = (docId: string) => {
-        const doc = docs.find(d => d.id === docId);
-        if (!doc) return "Unknown";
-        return `${doc.docType.toUpperCase()} — ${IdentityStore.maskDocNumber(doc.docNumber, doc.docType as DocType)}`;
+    const getDocLabel = (identityId: string) => {
+        const doc = docs.find(d => d.id === identityId);
+        if (!doc) return "Unknown Document";
+        return `${doc.idType.toUpperCase()} — •••• ${doc.numberMasked}`;
     };
 
-    const getContactValue = (cpId: string) => {
-        const cp = contacts.find(c => c.id === cpId);
-        return cp ? `${cp.type === "mobile" ? "📱" : "📧"} ${cp.value}` : "—";
+    const getContactValue = (link: any) => {
+        const emoji = link.linkedType === "mobile" ? "📱" : "📧";
+        return `${emoji} ${link.linkedValue}`;
     };
 
-    const handleDelete = (linkId: string) => {
-        IdentityStore.deleteLink(linkId);
-        setDeleteId(null);
-        setToast("Link removed");
-        setTimeout(() => setToast(""), 2000);
+    const handleDelete = async (linkId: string) => {
+        try {
+            const res = await fetch(`/api/identity/links?id=${linkId}`, {
+                method: 'DELETE'
+            });
+
+            if (res.ok) {
+                setLinks(prev => prev.filter(l => l.id !== linkId));
+                setDeleteId(null);
+                setToast("Link removed");
+                setTimeout(() => setToast(""), 2000);
+            }
+        } catch (error) {
+            console.error('Delete failed:', error);
+        }
     };
 
-    const health = IdentityStore.getConfidence();
+    const health = docs.length > 0 ? Math.min(100, (new Set(docs.map(d => d.idType)).size / 5) * 100) : 0;
 
     return (
         <div className="flex flex-col min-h-screen p-6 pb-24 relative">
@@ -93,7 +128,7 @@ export default function LinksListPage() {
                                         <span className="text-lg">{SERVICE_EMOJIS[link.serviceType] || "📎"}</span>
                                         <div className="flex-1 min-w-0">
                                             <p className="text-sm text-white font-medium truncate">{link.serviceName}</p>
-                                            <p className="text-xs text-white/35 mt-0.5">{getContactValue(link.contactPointId)}</p>
+                                            <p className="text-xs text-white/35 mt-0.5">{getContactValue(link)}</p>
                                         </div>
                                         <button onClick={() => setDeleteId(link.id)}
                                             className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center hover:bg-red-500/15 transition-colors">

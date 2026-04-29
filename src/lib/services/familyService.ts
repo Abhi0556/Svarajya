@@ -31,10 +31,10 @@ class FamilyService extends BaseService<FamilyMember, CreateFamilyMemberInput, U
   /**
    * Get all family members for a user
    */
-  async getFamilyMembers(userId: string): Promise<FamilyMember[]> {
+  async getFamilyMembers(userid: string): Promise<FamilyMember[]> {
     try {
       return await prisma.familyMember.findMany({
-        where: { userId },
+        where: { userId: userid },
         orderBy: { createdAt: 'desc' },
       });
     } catch (error) {
@@ -46,12 +46,12 @@ class FamilyService extends BaseService<FamilyMember, CreateFamilyMemberInput, U
   /**
    * Create family member for user
    */
-  async createForUser(userId: string, data: CreateFamilyMemberInput): Promise<FamilyMember> {
+  async createForUser(userid: string, data: CreateFamilyMemberInput): Promise<FamilyMember> {
     try {
       return await prisma.familyMember.create({
         data: {
           ...data,
-          userId,
+          userId: userid,
         },
       });
     } catch (error) {
@@ -63,14 +63,30 @@ class FamilyService extends BaseService<FamilyMember, CreateFamilyMemberInput, U
   /**
    * Delete family member (ensure belongs to user)
    */
-  async deleteForUser(id: string, userId: string): Promise<FamilyMember> {
+  async deleteForUser(id: string, userid: string): Promise<{ success: boolean; reason?: string }> {
     try {
-      return await prisma.familyMember.delete({
-        where: {
-          id,
-        },
-        // Verify ownership
+      console.log(`[FamilyService] Attempting to delete member ${id} for user ${userid}`);
+      
+      const member = await prisma.familyMember.findUnique({
+        where: { id },
       });
+      
+      if (!member) {
+        console.warn(`[FamilyService] No family member found with ID ${id}`);
+        return { success: false, reason: 'NOT_FOUND' };
+      }
+      
+      if (member.userId !== userid) {
+        console.warn(`[FamilyService] Ownership mismatch. Member ${id} belongs to user ${member.userId}, but user ${userid} tried to delete it.`);
+        return { success: false, reason: 'FORBIDDEN' };
+      }
+      
+      await prisma.familyMember.delete({
+        where: { id },
+      });
+      
+      console.log(`[FamilyService] Successfully deleted member ${id}`);
+      return { success: true };
     } catch (error) {
       console.error('[FamilyService] Error deleting family member:', error);
       throw error;
@@ -80,11 +96,11 @@ class FamilyService extends BaseService<FamilyMember, CreateFamilyMemberInput, U
   /**
    * Get nominees (family members eligible as nominees)
    */
-  async getNominees(userId: string): Promise<FamilyMember[]> {
+  async getNominees(userid: string): Promise<FamilyMember[]> {
     try {
       return await prisma.familyMember.findMany({
         where: {
-          userId,
+          userId: userid,
           nomineeEligible: true,
         },
       });
@@ -97,11 +113,11 @@ class FamilyService extends BaseService<FamilyMember, CreateFamilyMemberInput, U
   /**
    * Get dependents
    */
-  async getDependents(userId: string): Promise<FamilyMember[]> {
+  async getDependents(userid: string): Promise<FamilyMember[]> {
     try {
       return await prisma.familyMember.findMany({
         where: {
-          userId,
+          userId: userid,
           isDependent: true,
         },
       });

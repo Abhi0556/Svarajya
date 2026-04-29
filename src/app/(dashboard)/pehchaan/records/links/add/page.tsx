@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -33,22 +33,50 @@ function LinkWizardForm() {
     const searchParams = useSearchParams();
     const preDocId = searchParams.get("docId") || "";
 
-    // Seed contacts from onboarding
-    IdentityStore.seedFromOnboarding();
-    const docs = IdentityStore.getDocs();
-    const contacts = IdentityStore.getContacts();
-
+    const [docs, setDocs] = useState<any[]>([]);
+    const [contacts, setContacts] = useState<any[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
     const [step, setStep] = useState<Step>(1);
     const [docId, setDocId] = useState(preDocId);
     const [serviceType, setServiceType] = useState("");
     const [serviceName, setServiceName] = useState("");
     const [customName, setCustomName] = useState("");
-    // Auto-select the first contact if available
-    const [contactPointId, setContactPointId] = useState(contacts.length > 0 ? contacts[0].id : "");
+    const [contactPointId, setContactPointId] = useState("");
     const [newMobile, setNewMobile] = useState("");
     const [newEmail, setNewEmail] = useState("");
     const [saved, setSaved] = useState(false);
     const [error, setError] = useState("");
+
+    useEffect(() => {
+        const fetchData = async () => {
+            setIsLoading(true);
+            try {
+                const [docsRes, profileRes] = await Promise.all([
+                    fetch('/api/identity'),
+                    fetch('/api/profile')
+                ]);
+
+                if (docsRes.ok) {
+                    const docsData = await docsRes.json();
+                    setDocs(docsData.data || []);
+                }
+
+                if (profileRes.ok) {
+                    const profile = await profileRes.json();
+                    const profileContacts = [];
+                    if (profile.data?.phone) profileContacts.push({ id: 'primary-mobile', type: 'mobile', value: profile.data.phone, label: 'Primary' });
+                    if (profile.data?.email) profileContacts.push({ id: 'primary-email', type: 'email', value: profile.data.email, label: 'Primary' });
+                    setContacts(profileContacts);
+                    if (profileContacts.length > 0) setContactPointId(profileContacts[0].id);
+                }
+            } catch (err) {
+                console.error("Fetch error:", err);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchData();
+    }, []);
 
     const selectedDoc = docs.find(d => d.id === docId);
     const suggestions = SUGGESTED_SERVICES[serviceType] || [];
@@ -64,31 +92,47 @@ function LinkWizardForm() {
             return;
         }
 
-        try {
-            const cp = IdentityStore.addContact(type, validation.normalized);
-            setContactPointId(cp.id);
-            setError("");
-            if (type === "mobile") setNewMobile(""); else setNewEmail("");
-        } catch (e) {
-            setError(e instanceof Error ? e.message : "Unable to add contact.");
-        }
+        // For now, we just add to local state in the wizard
+        const newContact = { id: `new-${Date.now()}`, type, value: validation.normalized, label: 'Added' };
+        setContacts(prev => [...prev, newContact]);
+        setContactPointId(newContact.id);
+        setError("");
+        if (type === "mobile") setNewMobile(""); else setNewEmail("");
     };
 
-    const handleSave = () => {
+    const handleSave = async () => {
         if (!docId) { setError("Please select a document."); return; }
         if (!serviceType) { setError("Please select a service type."); return; }
         const name = serviceName === "custom" ? customName : serviceName;
         if (!name) { setError("Please select or enter a service name."); return; }
         if (!contactPointId) { setError("Please select a contact method."); return; }
 
-        IdentityStore.addLink({
-            docId,
-            serviceType: serviceType as "bank" | "tax" | "insurance" | "investment" | "utility" | "other",
-            serviceName: name,
-            contactPointId,
-            confidence: "confirmed",
-        });
-        setSaved(true);
+        const selectedContact = contacts.find(c => c.id === contactPointId);
+        if (!selectedContact) { setError("Contact method not found."); return; }
+
+        try {
+            const res = await fetch('/api/identity/links', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    identityId: docId,
+                    linkedType: selectedContact.type,
+                    linkedValue: selectedContact.value,
+                    serviceName: name,
+                    serviceType: serviceType // included for categorization
+                })
+            });
+
+            if (res.ok) {
+                setSaved(true);
+            } else {
+                const err = await res.json();
+                setError(err.message || "Failed to save link.");
+            }
+        } catch (err) {
+            console.error("Save error:", err);
+            setError("An error occurred while saving.");
+        }
     };
 
     // ——— Success ———
@@ -149,7 +193,7 @@ function LinkWizardForm() {
                                             <button key={d.id} onClick={() => setDocId(d.id)}
                                                 className={`w-full text-left px-4 py-3 rounded-xl border text-sm transition-all ${docId === d.id ? "bg-amber-400/15 border-amber-400 text-amber-400" : "bg-white/5 border-white/10 text-white/55"
                                                     }`}>
-                                                {d.docType.toUpperCase()} — {IdentityStore.maskDocNumber(d.docNumber, d.docType as DocType)}
+                                                {d.idType.toUpperCase()} — •••• {d.numberMasked}
                                             </button>
                                         ))}
                                     </div>
@@ -157,7 +201,7 @@ function LinkWizardForm() {
                             )}
                             {selectedDoc && (
                                 <div className="bg-white/5 border border-white/10 rounded-xl p-3 text-xs text-white/40">
-                                    Linking: <span className="text-amber-400">{selectedDoc.docType.toUpperCase()}</span> — {IdentityStore.maskDocNumber(selectedDoc.docNumber, selectedDoc.docType)}
+                                    Linking: <span className="text-amber-400">{selectedDoc.idType.toUpperCase()}</span> — •••• {selectedDoc.numberMasked}
                                 </div>
                             )}
                             <div className="space-y-2">

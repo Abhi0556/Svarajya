@@ -64,31 +64,24 @@ export default function IdentityHub() {
     const displayDocs = dbDocuments.map(d => ({
         id: d.id,
         docType: d.idType.toLowerCase() as DocType,
-        docNumber: '****' + d.numberMasked, // placeholder for full number
+        docNumber: '****' + d.numberMasked,
         expiryDate: d.expiryDate,
+        issueDate: d.issuedDate,
+        placeOfIssue: d.placeOfIssue,
+        vaultFileId: d.vaultFileId,
         verificationStatus: 'not_verified' as const,
     }));
 
-    // Calculate confidence based on documents
-    const calculateConfidence = () => {
-        let total = 0;
-        displayDocs.forEach(doc => {
-            total += 20; // base per document
-            if (doc.expiryDate) {
-                const expiry = new Date(doc.expiryDate);
-                if (expiry > new Date()) {
-                    total += 10; // valid expiry
-                }
-            }
-            // Verified document +10% (currently all are 'not_verified', so +0)
-            if (doc.verificationStatus !== 'not_verified') {
-                total += 10;
-            }
-        });
-        return Math.min(100, total);
-    };
+    // Calculate coverage and confidence from DB documents (focus on 5 essential types)
+    const essentialTypes: DocType[] = ["aadhaar", "pan", "passport", "dl", "voter"];
+    const filledEssential = new Set(
+        displayDocs
+            .filter(d => essentialTypes.includes(d.docType))
+            .map(d => d.docType)
+    ).size;
 
-    const dbConfidence = calculateConfidence();
+    const dbConfidence = filledEssential * 20;
+    const dbCoverage = { filled: filledEssential, total: 5 };
 
     // Calculate level based on confidence
     const getLevel = (confidence: number) => {
@@ -110,9 +103,6 @@ export default function IdentityHub() {
             router.push(`/pehchaan/records/add?type=${docType}`);
         }
     };
-
-    // Calculate coverage from DB documents
-    const dbCoverage = { filled: new Set(displayDocs.map(d => d.docType)).size, total: 6 };
 
     const getExpiryBadge = (docType: DocType) => {
         const typeDocs = displayDocs.filter(d => d.docType === docType);

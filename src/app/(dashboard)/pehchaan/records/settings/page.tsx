@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, HardDrive, FolderOpen, Cloud, CheckCircle2, Download } from "lucide-react";
 import { IdentityStore } from "@/lib/identityStore";
@@ -14,9 +14,33 @@ const MODES = [
 
 export default function VaultSettings() {
     const router = useRouter();
-    const [mode, setMode] = useState<"local" | "folder" | "cloud">(IdentityStore.getStorageMode());
+    const [mode, setMode] = useState<"local" | "folder" | "cloud">("local");
+    const [autoReminder, setAutoReminder] = useState(true);
+    const [privacyEnabled, setPrivacyEnabled] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
     const [saved, setSaved] = useState(false);
     const [exporting, setExporting] = useState(false);
+
+    useEffect(() => {
+        const fetchSettings = async () => {
+            setIsLoading(true);
+            try {
+                const res = await fetch('/api/identity/settings');
+                if (res.ok) {
+                    const data = await res.json();
+                    const settings = data.data || {};
+                    setMode(settings.storageMode || "local");
+                    setAutoReminder(settings.autoReminder !== false);
+                    setPrivacyEnabled(!!settings.privacyEnabled);
+                }
+            } catch (error) {
+                console.error('Failed to fetch settings:', error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchSettings();
+    }, []);
 
     const handleExport = async () => {
         setExporting(true);
@@ -27,10 +51,25 @@ export default function VaultSettings() {
         }
     };
 
-    const handleSave = () => {
-        IdentityStore.setStorageMode(mode);
-        setSaved(true);
-        setTimeout(() => setSaved(false), 2000);
+    const handleSave = async () => {
+        try {
+            const res = await fetch('/api/identity/settings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    storageMode: mode,
+                    autoReminder,
+                    privacyEnabled
+                })
+            });
+
+            if (res.ok) {
+                setSaved(true);
+                setTimeout(() => setSaved(false), 2000);
+            }
+        } catch (error) {
+            console.error('Failed to save settings:', error);
+        }
     };
 
     return (
@@ -95,6 +134,29 @@ export default function VaultSettings() {
                                 </div>
                             </button>
                         ))}
+                        </div>
+                    </div>
+
+                    {/* Preferences Section */}
+                    <div className="space-y-3">
+                        <p className="text-xs text-white/40 uppercase tracking-wider">Preferences</p>
+                        <div className="bg-white/5 border border-white/10 rounded-xl p-4 space-y-4">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-sm text-white font-medium">Auto-Reminders</p>
+                                    <p className="text-xs text-white/35">Get notified before documents expire.</p>
+                                </div>
+                                <input type="checkbox" checked={autoReminder} onChange={e => setAutoReminder(e.target.checked)} 
+                                    className="w-5 h-5 accent-amber-400 bg-transparent border-white/20 rounded cursor-pointer" />
+                            </div>
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-sm text-white font-medium">Enhanced Privacy</p>
+                                    <p className="text-xs text-white/35">Hide sensitive details in lists.</p>
+                                </div>
+                                <input type="checkbox" checked={privacyEnabled} onChange={e => setPrivacyEnabled(e.target.checked)} 
+                                    className="w-5 h-5 accent-amber-400 bg-transparent border-white/20 rounded cursor-pointer" />
+                            </div>
                         </div>
                     </div>
 

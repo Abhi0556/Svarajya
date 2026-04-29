@@ -871,6 +871,7 @@ model User {
   updatedAt         DateTime    @updatedAt
   lastActiveAt      DateTime?
   deviceInfo        Json?
+  settings          Json? @default("{}")
 
   // Relations
   sessions          UserSession[]
@@ -1001,6 +1002,10 @@ model IdentityRecord {
   numberFull      String? // Encrypted full number (optional)
   expiryDate      DateTime? @db.Date
   issuedDate      DateTime? @db.Date
+  placeOfIssue    String?
+  dobOnDoc        DateTime? @db.Date
+  nameOnDoc       String?
+  vaultFileId     String?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 

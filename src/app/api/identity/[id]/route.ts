@@ -64,6 +64,10 @@ async function getHandler(
       numberMasked: record.numberMasked,
       expiryDate: record.expiryDate?.toISOString() || null,
       issuedDate: record.issuedDate?.toISOString() || null,
+      placeOfIssue: record.placeOfIssue,
+      dobOnDoc: record.dobOnDoc?.toISOString() || null,
+      nameOnDoc: record.nameOnDoc,
+      vaultFileId: record.vaultFileId,
     };
 
     return successResponse(response);
@@ -128,6 +132,10 @@ async function putHandler(
     const updatedRecord = await identityService.update(id, {
       expiryDate: data.expiryDate ? new Date(data.expiryDate) : undefined,
       issuedDate: data.issuedDate ? new Date(data.issuedDate) : undefined,
+      placeOfIssue: data.placeOfIssue,
+      dobOnDoc: data.dobOnDoc ? new Date(data.dobOnDoc) : undefined,
+      nameOnDoc: data.nameOnDoc,
+      vaultFileId: data.vaultFileId,
     });
 
     console.log('[Identity PUT] Updated record:', updatedRecord.id);
@@ -138,6 +146,10 @@ async function putHandler(
       numberMasked: updatedRecord.numberMasked,
       expiryDate: updatedRecord.expiryDate?.toISOString() || null,
       issuedDate: updatedRecord.issuedDate?.toISOString() || null,
+      placeOfIssue: updatedRecord.placeOfIssue,
+      dobOnDoc: updatedRecord.dobOnDoc?.toISOString() || null,
+      nameOnDoc: updatedRecord.nameOnDoc,
+      vaultFileId: updatedRecord.vaultFileId,
     };
 
     return successResponse(response);

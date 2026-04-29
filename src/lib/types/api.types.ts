@@ -117,6 +117,10 @@ export interface IdentityRecordResponse {
   numberMasked: string;
   expiryDate?: string | null;
   issuedDate?: string | null;
+  placeOfIssue?: string | null;
+  dobOnDoc?: string | null;
+  nameOnDoc?: string | null;
+  vaultFileId?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -127,6 +131,10 @@ export interface CreateIdentityRecordRequest {
   numberFull?: string;
   expiryDate?: string;
   issuedDate?: string;
+  placeOfIssue?: string;
+  dobOnDoc?: string;
+  nameOnDoc?: string;
+  vaultFileId?: string;
 }
 
 export interface UpdateIdentityRecordRequest {
@@ -134,6 +142,10 @@ export interface UpdateIdentityRecordRequest {
   numberMasked?: string;
   expiryDate?: string;
   issuedDate?: string;
+  placeOfIssue?: string;
+  dobOnDoc?: string;
+  nameOnDoc?: string;
+  vaultFileId?: string;
 }
 
 // ============================================================================

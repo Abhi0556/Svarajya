@@ -19,12 +19,13 @@ interface FamilyTreeProps {
     members: FamilyMember[];
     onAddMember: (member: Omit<FamilyMember, "id">) => void;
     onRemoveMember: (id: string) => void;
+    isSaving?: boolean;
 }
 
 const RELATION_OPTIONS = ["Spouse", "Child", "Parent", "Sibling", "Other"];
 const ROLE_OPTIONS = ["Viewer", "Executor", "Emergency-only", "None"];
 
-export const FamilyTreeGame = React.memo(function FamilyTreeGame({ members, onAddMember, onRemoveMember }: FamilyTreeProps) {
+export const FamilyTreeGame = React.memo(function FamilyTreeGame({ members, onAddMember, onRemoveMember, isSaving }: FamilyTreeProps) {
     const [isAdding, setIsAdding] = useState(false);
     const [errorMsg, setErrorMsg] = useState("");
     const [mobileError, setMobileError] = useState("");
@@ -284,7 +285,12 @@ export const FamilyTreeGame = React.memo(function FamilyTreeGame({ members, onAd
 
                             {errorMsg && <p className="text-[var(--color-rajya-danger)] text-xs text-center">{errorMsg}</p>}
 
-                            <button type="submit" className="w-full bg-[var(--color-rajya-accent)]/10 text-[var(--color-rajya-accent)] border border-[var(--color-rajya-accent)]/50 py-3 rounded-xl font-medium mt-2 hover:bg-[var(--color-rajya-accent)] hover:text-black transition-colors">
+                            <button 
+                                type="submit" 
+                                disabled={isSaving}
+                                className="w-full bg-[var(--color-rajya-accent)]/10 text-[var(--color-rajya-accent)] border border-[var(--color-rajya-accent)]/50 py-3 rounded-xl font-medium mt-2 hover:bg-[var(--color-rajya-accent)] hover:text-black transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {isSaving && <div className="w-4 h-4 border-2 border-amber-400/30 border-t-amber-400 rounded-full animate-spin" />}
                                 Link to Profile
                             </button>
                         </form>

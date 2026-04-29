@@ -8,6 +8,10 @@ export interface CreateIdentityRecordInput {
   numberFull?: string;
   expiryDate?: Date;
   issuedDate?: Date;
+  placeOfIssue?: string;
+  dobOnDoc?: Date;
+  nameOnDoc?: string;
+  vaultFileId?: string;
 }
 
 export interface UpdateIdentityRecordInput {
@@ -15,6 +19,10 @@ export interface UpdateIdentityRecordInput {
   numberMasked?: string;
   expiryDate?: Date;
   issuedDate?: Date;
+  placeOfIssue?: string;
+  dobOnDoc?: Date;
+  nameOnDoc?: string;
+  vaultFileId?: string;
 }
 
 /**
@@ -47,7 +55,15 @@ class IdentityService extends BaseService<IdentityRecord, CreateIdentityRecordIn
     try {
       return await prisma.identityRecord.create({
         data: {
-          ...data,
+          idType: data.idType,
+          numberMasked: data.numberMasked,
+          numberFull: data.numberFull,
+          expiryDate: data.expiryDate,
+          issuedDate: data.issuedDate,
+          placeOfIssue: data.placeOfIssue,
+          dobOnDoc: data.dobOnDoc,
+          nameOnDoc: data.nameOnDoc,
+          vaultFileId: data.vaultFileId,
           userId,
         },
       });

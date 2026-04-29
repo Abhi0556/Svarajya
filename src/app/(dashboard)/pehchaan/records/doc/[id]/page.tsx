@@ -9,6 +9,8 @@ import { OnboardingStore } from "@/lib/onboardingStore";
 import { SealStrengthRing } from "@/components/identity/SealStrengthRing";
 import { FileUploader } from "@/components/vault/FileUploader";
 import { validateControlledEmail, validateIndianMobile } from "@/lib/contactValidation";
+import { Vault } from "@/lib/vault";
+import { FileText, ExternalLink } from "lucide-react";
 
 const VERIFICATION_OPTIONS = [
     { value: "not_verified", label: "Not Verified" },
@@ -30,6 +32,9 @@ export default function DocDetail() {
     const [loading, setLoading] = useState(true);
 
     const [formState, setFormState] = useState({
+        docType: "",
+        docNumber: "",
+        nameOnDoc: "",
         dobOnDoc: "",
         expiryDate: "",
         issueDate: "",
@@ -37,8 +42,11 @@ export default function DocDetail() {
         linkedMobileId: "",
         linkedEmailId: "",
         notes: "",
-        verification: "not_verified"
+        verification: "not_verified",
+        vaultFileId: ""
     });
+
+    const [fileUrl, setFileUrl] = useState<string | null>(null);
 
     const [newMobile, setNewMobile] = useState("");
     const [newEmail, setNewEmail] = useState("");
@@ -61,7 +69,7 @@ export default function DocDetail() {
                         docType: (apiDoc.idType?.toLowerCase() as any) || 'other',
                         docNumber: apiDoc.numberMasked || '',
                         normalizedDocNumber: apiDoc.numberMasked || '',
-                        nameOnDoc: '',
+                        nameOnDoc: apiDoc.nameOnDoc || '',
                         expiryDate: apiDoc.expiryDate || undefined,
                         issueDate: apiDoc.issuedDate || undefined,
                         verificationStatus: 'not_verified',
@@ -69,23 +77,27 @@ export default function DocDetail() {
                         createdAt: Date.now(),
                         updatedAt: Date.now(),
                         customDocName: undefined,
-                        dobOnDoc: undefined,
-                        placeOfIssue: undefined,
+                        dobOnDoc: apiDoc.dobOnDoc ? apiDoc.dobOnDoc.split('T')[0] : undefined,
+                        placeOfIssue: apiDoc.placeOfIssue || undefined,
                         linkedMobileId: undefined,
                         linkedEmailId: undefined,
                         notes: undefined,
-                        vaultFileId: undefined,
+                        vaultFileId: apiDoc.vaultFileId || undefined,
                     });
                     setContacts([]);
                     setFormState({
-                        dobOnDoc: "",
-                        expiryDate: apiDoc.expiryDate || "",
-                        issueDate: apiDoc.issuedDate || "",
-                        placeOfIssue: "",
+                        docType: apiDoc.idType || "",
+                        docNumber: apiDoc.numberMasked || "",
+                        nameOnDoc: apiDoc.nameOnDoc || "",
+                        dobOnDoc: apiDoc.dobOnDoc ? apiDoc.dobOnDoc.split('T')[0] : "",
+                        expiryDate: apiDoc.expiryDate ? apiDoc.expiryDate.split('T')[0] : "",
+                        issueDate: apiDoc.issuedDate ? apiDoc.issuedDate.split('T')[0] : "",
+                        placeOfIssue: apiDoc.placeOfIssue || "",
                         linkedMobileId: "",
                         linkedEmailId: "",
                         notes: "",
-                        verification: 'not_verified'
+                        verification: 'not_verified',
+                        vaultFileId: apiDoc.vaultFileId || ""
                     });
                 } else {
                     console.error('Failed to fetch document:', response.status, response.statusText);
@@ -105,6 +117,12 @@ export default function DocDetail() {
         
         fetchDoc();
     }, [docId]);
+
+    useEffect(() => {
+        if (formState.vaultFileId) {
+            Vault.getPreviewUrl(formState.vaultFileId).then(setFileUrl);
+        }
+    }, [formState.vaultFileId]);
 
     const links: LinkMapping[] = [];
 
@@ -167,8 +185,10 @@ export default function DocDetail() {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    expiryDate: formState.expiryDate,
-                    issuedDate: formState.issueDate,
+                    expiryDate: formState.expiryDate || null,
+                    issuedDate: formState.issueDate || null,
+                    placeOfIssue: formState.placeOfIssue || null,
+                    dobOnDoc: formState.dobOnDoc || null,
                 }),
             });
 
@@ -179,6 +199,8 @@ export default function DocDetail() {
                         ...prev,
                         expiryDate: data.data.expiryDate,
                         issueDate: data.data.issuedDate,
+                        dobOnDoc: data.data.dobOnDoc,
+                        placeOfIssue: data.data.placeOfIssue,
                     } : prev);
                 }
                 setSaved(true);
@@ -211,21 +233,48 @@ export default function DocDetail() {
                     <SealStrengthRing percentage={strength} size={52} label="Seal" />
                 </header>
 
-                <div className="grid grid-cols-3 gap-3 mb-8">
+                {/* <div className="grid grid-cols-3 gap-3 mb-8">
                     <ActionButton icon={<Link2 />} label="Link" onClick={() => {}} />
                     <ActionButton icon={<Bell />} label="Remind" onClick={() => {}} />
-                    <ActionButton icon={<Edit3 />} label={editing ? "Cancel" : "Edit"} onClick={() => setEditing(!editing)} active={editing} />
-                </div>
+                    <div className="col-start-3">
+                        <ActionButton icon={<Edit3 />} label={editing ? "Cancel" : "Edit"} onClick={() => setEditing(!editing)} active={editing} />
+                    </div>
+                </div> */}
 
                 <div className="space-y-6">
                     <section className="grid grid-cols-2 gap-4">
-                        <InputField label="DOB on Doc" type="date" value={formState.dobOnDoc} disabled={!editing} onChange={(v: string) => setFormState(s => ({...s, dobOnDoc: v}))} />
-                        <InputField label="Expiry" type="date" value={formState.expiryDate} disabled={!editing} onChange={(v: string) => setFormState(s => ({...s, expiryDate: v}))} />
-                        <InputField label="Issue Date" type="date" value={formState.issueDate} disabled={!editing} onChange={(v: string) => setFormState(s => ({...s, issueDate: v}))} />
-                        <InputField label="Place of Issue" type="text" value={formState.placeOfIssue} disabled={!editing} onChange={(v: string) => setFormState(s => ({...s, placeOfIssue: v}))} />
+                        <div className="col-span-2">
+                            <DisplayField label="Name on Document" value={formState.nameOnDoc} />
+                        </div>
+                        <DisplayField label="Document Type" value={formState.docType} />
+                        <DisplayField label="Document Number" value={formState.docNumber} />
+                        <DisplayField label="DOB on Doc" value={formatDate(formState.dobOnDoc)} />
+                        <DisplayField label="Expiry" value={formatDate(formState.expiryDate)} />
+                        <DisplayField label="Issue Date" value={formatDate(formState.issueDate)} />
+                        <DisplayField label="Place of Issue" value={formState.placeOfIssue} />
                     </section>
 
-                    <ContactSelect 
+                    {fileUrl && (
+                        <section className="space-y-4">
+                            <label className="text-[10px] font-bold text-white/30 uppercase tracking-[0.15em]">Attached Document</label>
+                            <div className="p-4 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <FileText className="w-5 h-5 text-amber-400" />
+                                    <span className="text-sm text-white/70">Secure Document Scan</span>
+                                </div>
+                                <a 
+                                    href={fileUrl} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="flex items-center gap-2 text-amber-400 text-xs font-bold"
+                                >
+                                    VIEW <ExternalLink className="w-3.5 h-3.5" />
+                                </a>
+                            </div>
+                        </section>
+                    )}
+
+                    {/* <ContactSelect 
                         label="Linked Mobile" 
                         value={formState.linkedMobileId} 
                         options={contacts.filter(c => c.type === "mobile")} 
@@ -245,16 +294,27 @@ export default function DocDetail() {
                         onNewValueChange={(v: string) => setNewEmail(v)}
                         onAdd={() => handleAddContact('email')}
                         onSelect={(v: string) => setFormState(s => ({...s, linkedEmailId: v}))}
-                    />
+                    /> */}
                 </div>
+            </div>
+        </div>
+    );
+}
 
-                <div className="fixed bottom-0 left-0 right-0 p-6">
-                    {editing && (
-                        <button onClick={handleSave} className="w-full bg-amber-400 text-slate-950 font-bold py-4 rounded-2xl">
-                            Update Seal
-                        </button>
-                    )}
-                </div>
+const formatDate = (dateStr: string | null | undefined) => {
+    if (!dateStr) return null;
+    const parts = dateStr.split('T')[0].split('-');
+    if (parts.length !== 3) return dateStr;
+    const [year, month, day] = parts;
+    return `${day}-${month}-${year}`;
+};
+
+function DisplayField({ label, value }: { label: string; value: string | undefined | null }) {
+    return (
+        <div className="space-y-1">
+            <label className="text-[10px] font-bold text-white/30 uppercase tracking-[0.1em]">{label}</label>
+            <div className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white/80 min-h-[44px] flex items-center">
+                {value || <span className="text-white/20 italic text-[11px]">Not provided</span>}
             </div>
         </div>
     );
@@ -267,22 +327,6 @@ function ActionButton({ icon, label, onClick, active }: ActionBtnProps) {
             <span className={active ? 'text-amber-400' : 'text-white/40'}>{icon}</span>
             <span className="text-[10px] font-bold text-white/40">{label}</span>
         </button>
-    );
-}
-
-interface InputProps { label: string; type: string; value: string; onChange: (v: string) => void; disabled: boolean; }
-function InputField({ label, type, value, onChange, disabled }: InputProps) {
-    return (
-        <div className="space-y-1">
-            <label className="text-[10px] font-bold text-white/30 uppercase">{label}</label>
-            <input 
-                type={type} 
-                value={value} 
-                onChange={e => onChange(e.target.value)} 
-                disabled={disabled}
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-3 text-sm text-white disabled:opacity-50"
-            />
-        </div>
     );
 }
 

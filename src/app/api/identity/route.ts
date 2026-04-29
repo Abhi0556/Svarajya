@@ -26,7 +26,15 @@ async function getHandler(request: NextRequest): Promise<NextResponse> {
   }
 
   try {
-    const records = await identityService.getForUser(authContext.userId);
+    const { searchParams } = new URL(request.url);
+    const expiring = searchParams.get('expiring') === 'true';
+
+    let records;
+    if (expiring) {
+      records = await identityService.getExpiringSoon(authContext.userId);
+    } else {
+      records = await identityService.getForUser(authContext.userId);
+    }
 
     const responses: IdentityRecordResponse[] = records.map((record) => ({
       id: record.id,
@@ -35,6 +43,10 @@ async function getHandler(request: NextRequest): Promise<NextResponse> {
       numberMasked: record.numberMasked,
       expiryDate: record.expiryDate?.toISOString() || null,
       issuedDate: record.issuedDate?.toISOString() || null,
+      placeOfIssue: record.placeOfIssue,
+      dobOnDoc: record.dobOnDoc?.toISOString() || null,
+      nameOnDoc: record.nameOnDoc,
+      vaultFileId: record.vaultFileId,
       createdAt: record.createdAt.toISOString(),
       updatedAt: record.updatedAt.toISOString(),
     }));
@@ -87,6 +99,10 @@ async function postHandler(request: NextRequest): Promise<NextResponse> {
         numberMasked: data.numberMasked,
         expiryDate: data.expiryDate ? new Date(data.expiryDate) : undefined,
         issuedDate: data.issuedDate ? new Date(data.issuedDate) : undefined,
+        placeOfIssue: data.placeOfIssue,
+        dobOnDoc: data.dobOnDoc ? new Date(data.dobOnDoc) : undefined,
+        nameOnDoc: data.nameOnDoc,
+        vaultFileId: data.vaultFileId,
       });
       console.log('[Identity POST] Updated record:', record.id);
     } else {
@@ -97,6 +113,10 @@ async function postHandler(request: NextRequest): Promise<NextResponse> {
         numberMasked: data.numberMasked,
         expiryDate: data.expiryDate ? new Date(data.expiryDate) : undefined,
         issuedDate: data.issuedDate ? new Date(data.issuedDate) : undefined,
+        placeOfIssue: data.placeOfIssue,
+        dobOnDoc: data.dobOnDoc ? new Date(data.dobOnDoc) : undefined,
+        nameOnDoc: data.nameOnDoc,
+        vaultFileId: data.vaultFileId,
       });
       console.log('[Identity POST] Created record:', record.id);
     }
@@ -108,6 +128,10 @@ async function postHandler(request: NextRequest): Promise<NextResponse> {
       numberMasked: record.numberMasked,
       expiryDate: record.expiryDate?.toISOString() || null,
       issuedDate: record.issuedDate?.toISOString() || null,
+      placeOfIssue: record.placeOfIssue,
+      dobOnDoc: record.dobOnDoc?.toISOString() || null,
+      nameOnDoc: record.nameOnDoc,
+      vaultFileId: record.vaultFileId,
       createdAt: record.createdAt.toISOString(),
       updatedAt: record.updatedAt.toISOString(),
     };

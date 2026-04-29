@@ -79,7 +79,7 @@ export default function LandingPage() {
       <GamificationSection />
 
       {/* Security Section */}
-      <SecuritySection />
+      {/* <SecuritySection /> */}
 
       {/* Social Proof Section */}
       <SocialProofSection />
@@ -721,6 +721,7 @@ function GamificationSection() {
 }
 
 // ============ SECURITY SECTION ============
+/*
 function SecuritySection() {
   const ref = useRef(null)
   const isInView = useInView(ref, { once: true, margin: '-100px' })
@@ -790,7 +791,7 @@ function SecuritySection() {
               ))}
             </div>
 
-            {/* Privacy Statement */}
+            // Privacy Statement removed 
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={isInView ? { opacity: 1, y: 0 } : {}}
@@ -803,52 +804,20 @@ function SecuritySection() {
             </motion.div>
           </motion.div>
 
-          {/* Royal Seal Animation */}
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={isInView ? { opacity: 1, scale: 1 } : {}}
             transition={{ delay: 0.3 }}
             className="flex justify-center"
           >
-            <div className="relative">
-              {/* Outer ring */}
-              <motion.div
-                animate={{ rotate: 360 }}
-                transition={{ repeat: Infinity, duration: 60, ease: 'linear' }}
-                className="absolute inset-0 w-56 h-56 rounded-full border-2 border-dashed border-mudra-gold/30"
-              />
-
-              {/* Middle ring */}
-              <motion.div
-                animate={{ scale: [1, 1.05, 1] }}
-                transition={{ repeat: Infinity, duration: 3, ease: 'easeInOut' }}
-                className="absolute inset-4 rounded-full border border-mudra-gold/20"
-              />
-
-              {/* Seal */}
-              <motion.div
-                initial={{ scale: 2, rotate: -10, opacity: 0 }}
-                animate={isInView ? { scale: 1, rotate: 0, opacity: 1 } : {}}
-                transition={{ delay: 0.5, duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
-                className="w-56 h-56 rounded-full bg-linear-to-br from-mudra-gold via-yellow-500 to-mudra-gold flex items-center justify-center shadow-2xl relative"
-              >
-                {/* Inner pattern */}
-                <div className="absolute inset-4 rounded-full border-2 border-white/30" />
-                <div className="absolute inset-8 rounded-full border border-white/20" />
-
-                <div className="text-center">
-                  <Crown className="w-12 h-12 text-white mx-auto mb-2" />
-                  <p className="text-white font-serif font-semibold text-lg">Royal Seal</p>
-                  <p className="text-white/70 text-xs">Verified & Secure</p>
-                </div>
-              </motion.div>
-
-              {/* Glow effect */}
-              <motion.div
-                animate={{ opacity: [0.3, 0.5, 0.3] }}
-                transition={{ repeat: Infinity, duration: 2 }}
-                className="absolute inset-0 rounded-full bg-mudra-gold/20 blur-xl -z-10"
-              />
+            <div className="relative w-64 h-64 md:w-80 md:h-80">
+              <div className="absolute inset-0 bg-mudra-gold/20 rounded-full animate-pulse" />
+              <div className="absolute inset-4 bg-mudra-gold/30 rounded-full" />
+              <div className="absolute inset-8 bg-mudra-gold/40 rounded-full flex flex-col items-center justify-center text-center p-6 shadow-2xl">
+                <Crown className="w-12 h-12 text-white mb-4" />
+                <h4 className="font-serif text-xl font-bold text-white mb-1">Royal Seal</h4>
+                <p className="text-white/80 text-xs uppercase tracking-widest">Verified & Secure</p>
+              </div>
             </div>
           </motion.div>
         </div>
@@ -856,7 +825,7 @@ function SecuritySection() {
     </section>
   )
 }
-
+*/
 // ============ SOCIAL PROOF SECTION ============
 function SocialProofSection() {
   const ref = useRef(null)

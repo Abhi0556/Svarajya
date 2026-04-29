@@ -51,12 +51,66 @@ function AddDocumentForm() {
     const [nameOnDoc, setNameOnDoc] = useState("");
     const [revealed, setRevealed] = useState(false);
     const [vaultFileId, setVaultFileId] = useState<string | null>(null);
+    const [issuedDate, setIssuedDate] = useState("");
+    const [expiryDate, setExpiryDate] = useState("");
+    const [placeOfIssue, setPlaceOfIssue] = useState("");
+    const [dobOnDoc, setDobOnDoc] = useState("");
 
     // UI/UX State
     const [error, setError] = useState("");
     const [mismatchReason, setMismatchReason] = useState("");
     const [isSaving, setIsSaving] = useState(false);
     const [saved, setSaved] = useState<{ id: string; strength: number; coverage: any } | null>(null);
+
+    // Date Validation State
+    const [issueDateError, setIssueDateError] = useState("");
+    const [expiryDateError, setExpiryDateError] = useState("");
+    const [expiryWarning, setExpiryWarning] = useState("");
+
+    const userDob = OnboardingStore.get().dob;
+
+    useEffect(() => {
+        validateDates();
+    }, [issuedDate, expiryDate]);
+
+    const validateDates = () => {
+        setIssueDateError("");
+        setExpiryDateError("");
+        setExpiryWarning("");
+        
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        let valid = true;
+
+        if (issuedDate) {
+            const issue = new Date(issuedDate);
+            if (issue > today) {
+                setIssueDateError("Issue date cannot be in the future");
+                valid = false;
+            } else if (userDob && issue < new Date(userDob)) {
+                setIssueDateError("Issue date cannot be before your date of birth");
+                valid = false;
+            }
+        }
+        
+        if (expiryDate) {
+            const expiry = new Date(expiryDate);
+            if (issuedDate) {
+                const issue = new Date(issuedDate);
+                if (expiry <= issue) {
+                    setExpiryDateError("Expiry date must be after issue date");
+                    valid = false;
+                }
+            }
+
+            if (expiry < today) {
+                setExpiryWarning("Warning: This document has expired.");
+            }
+        }
+        
+        return valid;
+    };
 
     /**
      * Fetch all identity records from the database on mount.
@@ -140,6 +194,10 @@ function AddDocumentForm() {
         }
         setDocType(type);
         setDocNumber("");
+        setIssuedDate("");
+        setExpiryDate("");
+        setPlaceOfIssue("");
+        setDobOnDoc("");
         setNameOnDoc("");
         setMismatchReason("");
         setError("");
@@ -167,11 +225,19 @@ function AddDocumentForm() {
         if (!cleanNumber.trim()) { setError("Document number is required."); setIsSaving(false); return; }
         if (!nameOnDoc.trim()) { setError("Please enter the name exactly as printed."); setIsSaving(false); return; }
         if (isNameMismatched && !mismatchReason.trim()) { setError("A reason for the name mismatch is required for the audit trail."); setIsSaving(false); return; }
+        if (!vaultFileId) { setError("Please upload a document file to proceed."); setIsSaving(false); return; }
 
         // 2. Pattern Validation (Checksum/Regex)
         const valResult = DocumentValidator.validateByType(docType, cleanNumber);
         if (valResult.status === "invalid") {
             setError(valResult.message);
+            setIsSaving(false);
+            return;
+        }
+
+        // 2.1 Date Validation
+        if (!validateDates()) {
+            setError("Please fix date validation errors.");
             setIsSaving(false);
             return;
         }
@@ -182,8 +248,12 @@ function AddDocumentForm() {
             const apiPayload = {
                 idType: docType.toUpperCase(),
                 numberMasked,
-                expiryDate: null,
-                issuedDate: null,
+                issuedDate: issuedDate || null,
+                expiryDate: expiryDate || null,
+                placeOfIssue: placeOfIssue || null,
+                dobOnDoc: dobOnDoc || null,
+                nameOnDoc: nameOnDoc.trim(),
+                vaultFileId,
             };
 
             const apiResponse = await fetch("/api/identity", {
@@ -194,7 +264,11 @@ function AddDocumentForm() {
 
             if (!apiResponse.ok) {
                 const errorData = await apiResponse.json();
-                if (apiResponse.status === 409 || errorData.error?.includes("duplicate") || errorData.error?.includes("already exists")) {
+                const isDuplicate = typeof errorData.error === 'string' && 
+                    (errorData.error.toLowerCase().includes("duplicate") || 
+                     errorData.error.toLowerCase().includes("already exists"));
+
+                if (apiResponse.status === 409 || isDuplicate) {
                     setError("This document type already exists in your vault.");
                     setIsSaving(false);
                     return;
@@ -225,8 +299,34 @@ function AddDocumentForm() {
             }, 800);
 
         } catch (e: any) {
-            console.error("Save error:", e);
-            setError(e.message === "DUPLICATE" ? "This document already exists in your Sva-Rajya Vault." : "An error occurred during secure persistence.");
+            console.error("Save error details:", e);
+            
+            let errorMessage = "An error occurred during secure persistence.";
+            
+            if (e instanceof Error) {
+                errorMessage = e.message;
+            } else if (typeof e === 'string') {
+                errorMessage = e;
+            } else {
+                try {
+                    // Safe stringify for complex objects
+                    errorMessage = JSON.stringify(e);
+                } catch (err) {
+                    errorMessage = "A complex system error occurred.";
+                }
+            }
+
+            // User-friendly conversion for known issues
+            const lowMsg = errorMessage.toLowerCase();
+            if (lowMsg.includes("duplicate") || lowMsg.includes("already exists") || lowMsg.includes("unique constraint") || lowMsg.includes("409")) {
+                errorMessage = "This document type already exists in your Sva-Rajya Vault.";
+            } else if (lowMsg.includes("auth") || lowMsg.includes("unauthorized") || lowMsg.includes("401")) {
+                errorMessage = "Authentication session expired. Please log in again.";
+            } else if (errorMessage === "[object Object]") {
+                errorMessage = "A secure database error occurred (Object format error).";
+            }
+            
+            setError(errorMessage);
             setIsSaving(false);
         }
     };
@@ -439,6 +539,50 @@ function AddDocumentForm() {
                                     </button>
                                 </div>
                             </section>
+                            
+                            {/* New Fields */}
+                            <section className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-bold text-white/30 uppercase tracking-[0.15em]">Issue Date</label>
+                                    <input 
+                                        type="date" 
+                                        value={issuedDate} 
+                                        onChange={(e) => setIssuedDate(e.target.value)} 
+                                        className={`w-full bg-white/5 border ${issueDateError ? 'border-red-500/50' : 'border-white/10'} rounded-2xl px-5 py-4 text-white outline-none focus:border-amber-400/40 transition-all`}
+                                    />
+                                    {issueDateError && <p className="text-[10px] text-red-400 font-medium">{issueDateError}</p>}
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-bold text-white/30 uppercase tracking-[0.15em]">Expiry Date</label>
+                                    <input 
+                                        type="date" 
+                                        value={expiryDate} 
+                                        onChange={(e) => setExpiryDate(e.target.value)} 
+                                        className={`w-full bg-white/5 border ${expiryDateError ? 'border-red-500/50' : expiryWarning ? 'border-amber-500/50' : 'border-white/10'} rounded-2xl px-5 py-4 text-white outline-none focus:border-amber-400/40 transition-all`}
+                                    />
+                                    {expiryDateError && <p className="text-[10px] text-red-400 font-medium">{expiryDateError}</p>}
+                                    {expiryWarning && !expiryDateError && <p className="text-[10px] text-amber-400 font-medium">{expiryWarning}</p>}
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-bold text-white/30 uppercase tracking-[0.15em]">Place of Issue</label>
+                                    <input 
+                                        type="text" 
+                                        value={placeOfIssue} 
+                                        onChange={(e) => setPlaceOfIssue(e.target.value)} 
+                                        placeholder="e.g., Delhi, Mumbai"
+                                        className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white placeholder-white/10 outline-none focus:border-amber-400/40 transition-all"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-bold text-white/30 uppercase tracking-[0.15em]">DOB on Document</label>
+                                    <input 
+                                        type="date" 
+                                        value={dobOnDoc} 
+                                        onChange={(e) => setDobOnDoc(e.target.value)} 
+                                        className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white outline-none focus:border-amber-400/40 transition-all"
+                                    />
+                                </div>
+                            </section>
 
                             {/* Upload Section */}
                             <section className="space-y-4">
@@ -494,7 +638,11 @@ function AddDocumentForm() {
             {/* Footer CTA — only shown for new documents */}
             {!isViewingExisting && (
                 <footer className="mt-auto pt-10 sticky bottom-0 bg-slate-950/80 backdrop-blur-md pb-6">
-                    <button onClick={handleSave} disabled={isSaving} className="w-full bg-amber-400 disabled:opacity-50 disabled:grayscale text-slate-950 font-bold py-5 rounded-2xl shadow-[0_10px_30px_rgba(201,162,39,0.15)] active:scale-[0.98] transition-all flex items-center justify-center gap-3">
+                    <button 
+                        onClick={handleSave} 
+                        disabled={isSaving || !vaultFileId || !!issueDateError || !!expiryDateError} 
+                        className="w-full bg-amber-400 disabled:opacity-50 disabled:grayscale text-slate-950 font-bold py-5 rounded-2xl shadow-[0_10px_30px_rgba(201,162,39,0.15)] active:scale-[0.98] transition-all flex items-center justify-center gap-3"
+                    >
                         {isSaving ? (
                             <>
                                 <div className="w-5 h-5 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />
