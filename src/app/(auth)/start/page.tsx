@@ -108,6 +108,18 @@ export default function AuthGateway() {
         //return () => clearTimeout(t);
     }, [mode, countdown, switchMode]);
 
+    // Clear any auto-created session on login page load
+    useEffect(() => {
+        const clearAutoSession = async () => {
+            const { data } = await supabase.auth.getSession();
+            if (data.session) {
+                console.log("Auto-session detected, signing out...");
+                await supabase.auth.signOut();
+            }
+        };
+        clearAutoSession();
+    }, []);
+
     // ------------------------------------------
     // Rate limit countdown ticker
     // ------------------------------------------
@@ -304,14 +316,14 @@ export default function AuthGateway() {
                                 </button>.
                             </span>
                         );
-                    }   else if (errMsg.includes("email not confirmed") || errMsg.includes("email_not_confirmed")) {
+                    } else if (errMsg.includes("email not confirmed") || errMsg.includes("email_not_confirmed")) {
                         setError(
                             <span>
                                 Email not confirmed. Please check your inbox and click the verification link to activate your account.
                             </span>
                         );
-                    
-                    }else {
+
+                    } else {
                         setError(signInError.message || `Invalid email or password. ${left} attempt(s) remaining.`);
                     }
                     return;
@@ -429,10 +441,10 @@ export default function AuthGateway() {
                                 <p className="text-[10px] text-white/50 mt-4 tracking-wider">
                                     Once you confirm your email, you can log in using the button below.
                                 </p>
-                            
+
                             </div>
-                                
-                            
+
+
                         </motion.div>
                     )}
 
@@ -612,10 +624,10 @@ export default function AuthGateway() {
                             <button onClick={handleGoogleLogin} disabled={loading} type="button"
                                 className="w-full bg-white/5 border border-white/10 text-white font-medium py-3.5 rounded-xl text-sm flex items-center justify-center gap-3 transition-colors disabled:opacity-50 hover:bg-white/10">
                                 <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none">
-                                    <path d="M22.56 12.25C22.56 11.47 22.49 10.72 22.36 10H12V14.26H17.92C17.67 15.63 16.86 16.79 15.69 17.57V20.34H19.26C21.35 18.41 22.56 15.58 22.56 12.25Z" fill="#4285F4"/>
-                                    <path d="M12 23C14.97 23 17.46 22.01 19.26 20.34L15.69 17.57C14.71 18.23 13.46 18.66 12 18.66C9.18 18.66 6.78 16.75 5.91 14.18H2.21V17.05C4.01 20.64 7.72 23 12 23Z" fill="#34A853"/>
-                                    <path d="M5.91 14.18C5.69 13.51 5.56 12.78 5.56 12C5.56 11.22 5.69 10.49 5.91 9.82V6.95H2.21C1.47 8.43 1.04 10.16 1.04 12C1.04 13.84 1.47 15.57 2.21 17.05L5.91 14.18Z" fill="#FBBC05"/>
-                                    <path d="M12 5.34C13.62 5.34 15.07 5.9 16.21 6.99L19.34 3.86C17.46 2.1 14.97 1 12 1C7.72 1 4.01 3.36 2.21 6.95L5.91 9.82C6.78 7.25 9.18 5.34 12 5.34Z" fill="#EA4335"/>
+                                    <path d="M22.56 12.25C22.56 11.47 22.49 10.72 22.36 10H12V14.26H17.92C17.67 15.63 16.86 16.79 15.69 17.57V20.34H19.26C21.35 18.41 22.56 15.58 22.56 12.25Z" fill="#4285F4" />
+                                    <path d="M12 23C14.97 23 17.46 22.01 19.26 20.34L15.69 17.57C14.71 18.23 13.46 18.66 12 18.66C9.18 18.66 6.78 16.75 5.91 14.18H2.21V17.05C4.01 20.64 7.72 23 12 23Z" fill="#34A853" />
+                                    <path d="M5.91 14.18C5.69 13.51 5.56 12.78 5.56 12C5.56 11.22 5.69 10.49 5.91 9.82V6.95H2.21C1.47 8.43 1.04 10.16 1.04 12C1.04 13.84 1.47 15.57 2.21 17.05L5.91 14.18Z" fill="#FBBC05" />
+                                    <path d="M12 5.34C13.62 5.34 15.07 5.9 16.21 6.99L19.34 3.86C17.46 2.1 14.97 1 12 1C7.72 1 4.01 3.36 2.21 6.95L5.91 9.82C6.78 7.25 9.18 5.34 12 5.34Z" fill="#EA4335" />
                                 </svg>
                                 Continue with Google
                             </button>
