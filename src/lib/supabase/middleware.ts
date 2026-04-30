@@ -68,10 +68,14 @@ export async function updateSession(request: NextRequest) {
   }
 
   // If user is logged in, but tries to access auth pages, redirect to dashboard
+  // EXCEPT if they just verified their email (verification_success=true), in which case we let the login page 
+  // load so it can clear the auto-created session.
   if (user && (request.nextUrl.pathname.startsWith('/start') || request.nextUrl.pathname.startsWith('/login'))) {
-    const url = request.nextUrl.clone()
-    url.pathname = '/rajya'
-    return NextResponse.redirect(url)
+    if (!request.nextUrl.searchParams.has('verification_success')) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/rajya'
+      return NextResponse.redirect(url)
+    }
   }
 
   return supabaseResponse

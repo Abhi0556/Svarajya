@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
     MessageSquareOff, Landmark, ShieldCheck,
     Mail, Lock, ArrowRight, Loader2, User,
@@ -57,6 +57,18 @@ function getRemainingLockoutSeconds(state: LockState): number {
 type Mode = "splash" | "login" | "signup" | "forgot_password" | "registration_success";
 
 export default function AuthGateway() {
+    return (
+        <Suspense fallback={
+            <div className="flex items-center justify-center min-h-screen bg-slate-950">
+                <Loader2 className="w-8 h-8 text-amber-400 animate-spin" />
+            </div>
+        }>
+            <AuthGatewayContent />
+        </Suspense>
+    );
+}
+
+function AuthGatewayContent() {
     const router = useRouter();
     const supabase = createClient();
 
@@ -72,6 +84,7 @@ export default function AuthGateway() {
     const [error, setError] = useState<React.ReactNode>("");
     const [msg, setMsg] = useState("");
     const [countdown, setCountdown] = useState(10);
+    const searchParams = useSearchParams();
 
     // Rate-limit countdown (for lockout UI)
     const [rateLimitSeconds, setRateLimitSeconds] = useState(0);
@@ -108,6 +121,14 @@ export default function AuthGateway() {
         //return () => clearTimeout(t);
     }, [mode, countdown, switchMode]);
 
+    // Handle verification success from URL
+    useEffect(() => {
+        if (searchParams.get("verification_success") === "true") {
+            setMode("login");
+            setMsg("Email verified successfully! Please log in with your credentials.");
+        }
+    }, [searchParams]);
+
     // Clear any auto-created session on login page load
     useEffect(() => {
         const clearAutoSession = async () => {
@@ -118,7 +139,7 @@ export default function AuthGateway() {
             }
         };
         clearAutoSession();
-    }, []);
+    }, [supabase.auth]);
 
     // ------------------------------------------
     // Rate limit countdown ticker
@@ -308,14 +329,26 @@ export default function AuthGateway() {
                         setRateLimitSeconds(lockSecs);
                         setError(`Too many failed attempts. Try again in ${Math.ceil(lockSecs / 60)} minute(s).`);
                     } else if (errMsg.includes("invalid login credentials")) {
-                        setError(
-                            <span>
-                                No account found. Please{" "}
-                                <button type="button" onClick={() => switchMode("signup")} className="underline font-semibold hover:text-amber-300">
-                                    sign up to continue
-                                </button>.
-                            </span>
-                        );
+                        // Check if user exists to distinguish between wrong password vs no account
+                        try {
+                            const res = await fetch(`/api/check-user?email=${encodeURIComponent(trimmedEmail)}`);
+                            const { exists } = await res.json();
+                            
+                            if (exists) {
+                                setError("Incorrect password. Please try again.");
+                            } else {
+                                setError(
+                                    <span>
+                                        No account found with this email. Please{" "}
+                                        <button type="button" onClick={() => switchMode("signup")} className="underline font-semibold hover:text-amber-300">
+                                            sign up first
+                                        </button>.
+                                    </span>
+                                );
+                            }
+                        } catch (e) {
+                            setError("Invalid email or password. Please check your credentials.");
+                        }
                     } else if (errMsg.includes("email not confirmed") || errMsg.includes("email_not_confirmed")) {
                         setError(
                             <span>
