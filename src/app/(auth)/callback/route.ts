@@ -35,7 +35,7 @@ export async function GET(request: Request) {
 
     // Email verification / signup confirmation → redirect to onboarding
     if (type === 'signup' || type === 'email_change') {
-      return NextResponse.redirect(new URL('/onboarding/intro', requestUrl.origin))
+      return NextResponse.redirect(new URL('/login?verified=true', requestUrl.origin))
     }
   }
 
