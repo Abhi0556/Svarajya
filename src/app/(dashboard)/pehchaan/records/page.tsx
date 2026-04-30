@@ -64,7 +64,7 @@ export default function IdentityHub() {
     const displayDocs = dbDocuments.map(d => ({
         id: d.id,
         docType: d.idType.toLowerCase() as DocType,
-        docNumber: '• ' + d.numberMasked,
+        docNumber: '****' + d.numberMasked,
         expiryDate: d.expiryDate,
         issueDate: d.issuedDate,
         placeOfIssue: d.placeOfIssue,
