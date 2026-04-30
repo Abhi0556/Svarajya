@@ -103,9 +103,9 @@ export default function AuthGateway() {
     // ------------------------------------------
     useEffect(() => {
         if (mode !== "registration_success") return;
-        if (countdown <= 0) { switchMode("login"); setCountdown(10); return; }
-        const t = setTimeout(() => setCountdown(c => c - 1), 1000);
-        return () => clearTimeout(t);
+        // Removed auto-redirect - user should manually go back to login after confirming email        //if (countdown <= 0) { switchMode("login"); setCountdown(10); return; }
+        //const t = setTimeout(() => setCountdown(c => c - 1), 1000);
+        //return () => clearTimeout(t);
     }, [mode, countdown, switchMode]);
 
     // ------------------------------------------
@@ -180,7 +180,7 @@ export default function AuthGateway() {
             if (!fullName.trim()) { setError("Please enter your full name."); return; }
             if (password.length < 8) { setError("Password must be at least 8 characters."); return; }
             if (!/\d/.test(password)) { setError("Password must contain at least one number."); return; }
-            if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) { setError("Password must contain at least one special character."); return; }
+            if (!/[!@#$%^&*(),.?":{}|<>_-]/.test(password)) { setError("Password must contain at least one special character."); return; }
             if (password !== confirmPassword) { setError("Passwords do not match."); return; }
         }
 
@@ -304,7 +304,14 @@ export default function AuthGateway() {
                                 </button>.
                             </span>
                         );
-                    } else {
+                    }   else if (errMsg.includes("email not confirmed") || errMsg.includes("email_not_confirmed")) {
+                        setError(
+                            <span>
+                                Email not confirmed. Please check your inbox and click the verification link to activate your account.
+                            </span>
+                        );
+                    
+                    }else {
                         setError(signInError.message || `Invalid email or password. ${left} attempt(s) remaining.`);
                     }
                     return;
@@ -415,10 +422,17 @@ export default function AuthGateway() {
                                     className="w-full bg-white/5 border border-white/10 text-white py-4 rounded-xl text-sm hover:bg-white/10 transition-colors flex items-center justify-center gap-2">
                                     Back to Login <ArrowRight className="w-4 h-4" />
                                 </button>
-                                <p className="text-[10px] text-white/30 mt-4 tracking-wider">
-                                    Redirecting automatically in <span className="text-amber-400">{countdown}s</span>...
+                                {/*
+                                 * Redirecting automatically in 
+                                    <span className="text-amber-400">{countdown}s</span><div styleName={styles['---']}>
+                                    */}
+                                <p className="text-[10px] text-white/50 mt-4 tracking-wider">
+                                    Once you confirm your email, you can log in using the button below.
                                 </p>
+                            
                             </div>
+                                
+                            
                         </motion.div>
                     )}
 
@@ -522,7 +536,7 @@ export default function AuthGateway() {
                                                 {[
                                                     { label: "At least 8 characters", ok: password.length >= 8 },
                                                     { label: "Contains a number", ok: /\d/.test(password) },
-                                                    { label: "Contains a special character", ok: /[!@#$%^&*(),.?":{}|<>]/.test(password) },
+                                                    { label: "Contains a special character", ok: /[!@#$%^&*(),.?":{}|<>_-]/.test(password) },
                                                 ].map(r => (
                                                     <div key={r.label} className="flex items-center gap-2 text-xs">
                                                         {r.ok ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <X className="w-3.5 h-3.5 text-red-500/70" />}
@@ -633,7 +647,7 @@ export default function AuthGateway() {
                             <div className="w-8 h-8 rounded-lg bg-white/6 border border-white/10 flex items-center justify-center text-[#f2faf5]/90">
                                 {t.icon}
                             </div>
-                            <span className="text-[9px] text-[#f2faf5] text-center leading-tight max-w-[56px]">{t.label}</span>
+                            <span className="text-[9px] text-[#f2faf5] text-center leading-tight ">{t.label}</span>
                         </div>
                     ))}
                 </div>

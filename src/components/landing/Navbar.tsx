@@ -24,9 +24,10 @@ export function Navbar() {
 
   const navItems = [
     { label: t('nav.home'), href: '#hero' },
+    { label: t('nav.features'), href: '#problem' },
     { label: t('nav.map'), href: '#concept' },
     { label: t('nav.story'), href: '#story' },
-    { label: t('nav.features'), href: '#problem' },
+    
   ]
 
   const scrollToSection = (href: string) => {
