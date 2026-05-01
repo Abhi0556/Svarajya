@@ -12,17 +12,18 @@ export async function GET(request: Request) {
     )
   }
 
-  // Password reset flow → redirect to reset-password page
+  // Password reset flow → preserve the hash fragment (contains access_token)
   if (type === 'recovery') {
-    return NextResponse.redirect(new URL('/reset-password', requestUrl.origin))
+    // Preserve the entire hash when redirecting
+    const hash = requestUrl.hash || ''
+    return NextResponse.redirect(new URL('/reset-password' + hash, requestUrl.origin))
   }
 
   // Email verification / signup confirmation → redirect to login page
-  // No session exchange - user must login manually
   if (type === 'signup' || type === 'email_change') {
     return NextResponse.redirect(new URL('/login?verification_success=true', requestUrl.origin))
   }
 
-  // Default redirect to login page
+  // Default redirect to login
   return NextResponse.redirect(new URL('/login', requestUrl.origin))
 }
