@@ -305,6 +305,14 @@ function AuthGatewayContent() {
                 router.push("/onboarding/intro");
 
             } else if (mode === "forgot_password") {
+                const checkRes = await fetch(`/api/check-user?email=${encodeURIComponent(trimmedEmail)}`);
+                const checkData = await checkRes.json();
+
+                if (!checkData.exists) {
+                    setError("No account found with this email. Please sign up first.");
+                    return;
+                }
+
                 const { error: resetError } = await supabase.auth.resetPasswordForEmail(trimmedEmail, {
                     redirectTo: `${window.location.origin}/callback?type=recovery`
                 });
@@ -333,7 +341,7 @@ function AuthGatewayContent() {
                         try {
                             const res = await fetch(`/api/check-user?email=${encodeURIComponent(trimmedEmail)}`);
                             const { exists } = await res.json();
-                            
+
                             if (exists) {
                                 setError("Incorrect password. Please try again.");
                             } else {
