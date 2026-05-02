@@ -31,6 +31,19 @@ export default function ResetPasswordPage() {
         return () => clearTimeout(timer);
     }, [success, countdown, router]);
 
+    // Token verification on mount
+    useEffect(() => {
+        const hash = window.location.hash.substring(1);
+        const search = window.location.search;
+        const hashParams = new URLSearchParams(hash);
+        const queryParams = new URLSearchParams(search);
+        const token = hashParams.get('access_token') || queryParams.get('access_token');
+        
+        if (!token) {
+            setError("Invalid or missing reset token. Please request a new password reset link.");
+        }
+    }, []);
+
     const getErrorMessage = (err: unknown, fallback: string) => {
         if (typeof err === "object" && err !== null && "message" in err) {
             const msg = (err as { message?: string }).message;
@@ -40,48 +53,69 @@ export default function ResetPasswordPage() {
     };
 
     const handleReset = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setError("");
+    e.preventDefault();
+    setError("");
 
-        if (password.length < 8) {
-            setError("Password must be at least 8 characters long.");
-            return;
+    if (password.length < 8) {
+        setError("Password must be at least 8 characters long.");
+        return;
+    }
+    if (!/\d/.test(password)) {
+        setError("Password must contain at least one number.");
+        return;
+    }
+    if (!/[!@#$%^&*(),.?":{}|<>_-]/.test(password)) {
+        setError("Password must contain at least one special character.");
+        return;
+    }
+    if (password !== confirmPassword) {
+        setError("Passwords do not match.");
+        return;
+    }
+
+    setLoading(true);
+
+    try {
+        console.log("Extracting tokens from URL...");
+        const hash = window.location.hash.substring(1);
+        const search = window.location.search;
+        
+        const hashParams = new URLSearchParams(hash);
+        const queryParams = new URLSearchParams(search);
+        
+        const accessToken = hashParams.get('access_token') || queryParams.get('access_token');
+        const refreshToken = hashParams.get('refresh_token') || queryParams.get('refresh_token');
+
+        if (!accessToken) {
+            throw new Error("Invalid reset link. Please request a new password reset link.");
         }
-        if (!/\d/.test(password)) {
-            setError("Password must contain at least one number.");
-            return;
-        }
-        if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
-            setError("Password must contain at least one special character.");
-            return;
-        }
-        if (password !== confirmPassword) {
-            setError("Passwords do not match.");
-            return;
-        }
 
-        setLoading(true);
+        // Set the session using the token
+        const { error: sessionError } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken || '',
+        });
+        
+        if (sessionError) throw sessionError;
 
-        try {
-            const { error: updateError } = await supabase.auth.updateUser({
-                password: password
-            });
+        // Now update the password
+        const { error: updateError } = await supabase.auth.updateUser({
+            password: password
+        });
 
-            if (updateError) throw updateError;
+        if (updateError) throw updateError;
 
-            // Ensure the user is signed out so they land on the login page
-            const { error: signOutError } = await supabase.auth.signOut();
-            if (signOutError) console.warn("Sign out after password update failed:", signOutError);
-
-            setSuccess(true);
-            setCountdown(5);
-        } catch (err: unknown) {
-            setError(getErrorMessage(err, "Failed to update password. You may need to request a new link."));
-        } finally {
-            setLoading(false);
-        }
-    };
-
+        // Sign out after password update
+        await supabase.auth.signOut();
+        setSuccess(true);
+        setCountdown(5);
+    } catch (err: unknown) {
+        console.error("Password reset error:", err);
+        setError(getErrorMessage(err, "Failed to update password. The link may have expired. Please request a new reset link."));
+    } finally {
+        setLoading(false);
+    }
+};
     return (
         <div className="flex flex-col min-h-screen items-center justify-center p-8 relative overflow-hidden">
             {/* Background glow */}
@@ -198,8 +232,8 @@ export default function ResetPasswordPage() {
                                             <span className={/\d/.test(password) ? "text-emerald-400/90" : "text-white/40"}>Contains at least one number</span>
                                         </div>
                                         <div className="flex items-center gap-2 text-xs">
-                                            {/[!@#$%^&*(),.?":{}|<>]/.test(password) ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <X className="w-3.5 h-3.5 text-red-500/70" />}
-                                            <span className={/[!@#$%^&*(),.?":{}|<>]/.test(password) ? "text-emerald-400/90" : "text-white/40"}>Contains a special character</span>
+                                            {/[!@#$%^&*(),.?":{}|<>_-]/.test(password) ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <X className="w-3.5 h-3.5 text-red-500/70" />}
+                                            <span className={/[!@#$%^&*(),.?":{}|<>_-]/.test(password) ? "text-emerald-400/90" : "text-white/40"}>Contains a special character</span>
                                         </div>
                                     </div>
                                 </div>

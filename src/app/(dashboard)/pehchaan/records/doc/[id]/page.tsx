@@ -247,7 +247,7 @@ export default function DocDetail() {
                             <DisplayField label="Name on Document" value={formState.nameOnDoc} />
                         </div>
                         <DisplayField label="Document Type" value={formState.docType} />
-                        <DisplayField label="Document Number" value={formState.docNumber} />
+                        <DisplayField label="Document Number" value={formState.docNumber ? `• ${formState.docNumber}` : null} />
                         <DisplayField label="DOB on Doc" value={formatDate(formState.dobOnDoc)} />
                         <DisplayField label="Expiry" value={formatDate(formState.expiryDate)} />
                         <DisplayField label="Issue Date" value={formatDate(formState.issueDate)} />

@@ -125,7 +125,7 @@ export default function LinksListPage() {
                                 <p className="text-xs text-amber-400/70 uppercase tracking-wider">{getDocLabel(docId)}</p>
                                 {docLinks.map(link => (
                                     <div key={link.id} className="bg-white/5 border border-white/10 rounded-xl p-3.5 flex items-center gap-3">
-                                        <span className="text-lg">{SERVICE_EMOJIS[link.serviceType] || "📎"}</span>
+                                        <span className="text-lg">{SERVICE_EMOJIS[link.serviceType] || "🔗"}</span>
                                         <div className="flex-1 min-w-0">
                                             <p className="text-sm text-white font-medium truncate">{link.serviceName}</p>
                                             <p className="text-xs text-white/35 mt-0.5">{getContactValue(link)}</p>

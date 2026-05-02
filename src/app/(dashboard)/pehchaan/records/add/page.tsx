@@ -458,7 +458,7 @@ function AddDocumentForm() {
                                     <label className="text-[10px] font-bold text-white/30 uppercase tracking-[0.15em]">Masked Number (Last 4)</label>
                                     <div className="w-full bg-white/3 border border-white/8 rounded-2xl px-5 py-4 text-white/60 text-sm font-mono flex items-center gap-2">
                                         <Lock className="w-3.5 h-3.5 text-white/20" />
-                                        •••• •••• {activeDbRecord?.numberMasked}
+                                        • {activeDbRecord?.numberMasked}
                                     </div>
                                 </div>
 

@@ -254,12 +254,12 @@ export const IdentityStore = {
         const clean = raw.replace(/\s/g, "");
 
         if (docType === "aadhaar") {
-            return "**** **** " + clean.slice(-4);
+            return "•••• •••• " + clean.slice(-4); // Keep 4 dots for group alignment
         }
         if (docType === "pan") {
-            return clean.slice(0, 5) + "****" + clean.slice(-1);
+            return clean.slice(0, 5) + "••••" + clean.slice(-1);
         }
-        return raw.slice(0, 2) + "*".repeat(raw.length - 4) + raw.slice(-2);
+        return raw.slice(0, 2) + "•".repeat(raw.length - 4) + raw.slice(-2);
     },
 
     // ——— Identity Level ———

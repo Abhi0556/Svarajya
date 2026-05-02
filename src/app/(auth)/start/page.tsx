@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
     MessageSquareOff, Landmark, ShieldCheck,
     Mail, Lock, ArrowRight, Loader2, User,
@@ -57,6 +57,18 @@ function getRemainingLockoutSeconds(state: LockState): number {
 type Mode = "splash" | "login" | "signup" | "forgot_password" | "registration_success";
 
 export default function AuthGateway() {
+    return (
+        <Suspense fallback={
+            <div className="flex items-center justify-center min-h-screen bg-slate-950">
+                <Loader2 className="w-8 h-8 text-amber-400 animate-spin" />
+            </div>
+        }>
+            <AuthGatewayContent />
+        </Suspense>
+    );
+}
+
+function AuthGatewayContent() {
     const router = useRouter();
     const supabase = createClient();
 
@@ -72,6 +84,7 @@ export default function AuthGateway() {
     const [error, setError] = useState<React.ReactNode>("");
     const [msg, setMsg] = useState("");
     const [countdown, setCountdown] = useState(10);
+    const searchParams = useSearchParams();
 
     // Rate-limit countdown (for lockout UI)
     const [rateLimitSeconds, setRateLimitSeconds] = useState(0);
@@ -103,10 +116,30 @@ export default function AuthGateway() {
     // ------------------------------------------
     useEffect(() => {
         if (mode !== "registration_success") return;
-        if (countdown <= 0) { switchMode("login"); setCountdown(10); return; }
-        const t = setTimeout(() => setCountdown(c => c - 1), 1000);
-        return () => clearTimeout(t);
+        // Removed auto-redirect - user should manually go back to login after confirming email        //if (countdown <= 0) { switchMode("login"); setCountdown(10); return; }
+        //const t = setTimeout(() => setCountdown(c => c - 1), 1000);
+        //return () => clearTimeout(t);
     }, [mode, countdown, switchMode]);
+
+    // Handle verification success from URL
+    useEffect(() => {
+        if (searchParams.get("verification_success") === "true") {
+            setMode("login");
+            setMsg("Email verified successfully! Please log in with your credentials.");
+        }
+    }, [searchParams]);
+
+    // Clear any auto-created session on login page load
+    useEffect(() => {
+        const clearAutoSession = async () => {
+            const { data } = await supabase.auth.getSession();
+            if (data.session) {
+                console.log("Auto-session detected, signing out...");
+                await supabase.auth.signOut();
+            }
+        };
+        clearAutoSession();
+    }, [supabase.auth]);
 
     // ------------------------------------------
     // Rate limit countdown ticker
@@ -180,7 +213,7 @@ export default function AuthGateway() {
             if (!fullName.trim()) { setError("Please enter your full name."); return; }
             if (password.length < 8) { setError("Password must be at least 8 characters."); return; }
             if (!/\d/.test(password)) { setError("Password must contain at least one number."); return; }
-            if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) { setError("Password must contain at least one special character."); return; }
+            if (!/[!@#$%^&*(),.?":{}|<>_-]/.test(password)) { setError("Password must contain at least one special character."); return; }
             if (password !== confirmPassword) { setError("Passwords do not match."); return; }
         }
 
@@ -272,6 +305,14 @@ export default function AuthGateway() {
                 router.push("/onboarding/intro");
 
             } else if (mode === "forgot_password") {
+                const checkRes = await fetch(`/api/check-user?email=${encodeURIComponent(trimmedEmail)}`);
+                const checkData = await checkRes.json();
+
+                if (!checkData.exists) {
+                    setError("No account found with this email. Please sign up first.");
+                    return;
+                }
+
                 const { error: resetError } = await supabase.auth.resetPasswordForEmail(trimmedEmail, {
                     redirectTo: `${window.location.origin}/callback?type=recovery`
                 });
@@ -296,14 +337,33 @@ export default function AuthGateway() {
                         setRateLimitSeconds(lockSecs);
                         setError(`Too many failed attempts. Try again in ${Math.ceil(lockSecs / 60)} minute(s).`);
                     } else if (errMsg.includes("invalid login credentials")) {
+                        // Check if user exists to distinguish between wrong password vs no account
+                        try {
+                            const res = await fetch(`/api/check-user?email=${encodeURIComponent(trimmedEmail)}`);
+                            const { exists } = await res.json();
+
+                            if (exists) {
+                                setError("Incorrect password. Please try again.");
+                            } else {
+                                setError(
+                                    <span>
+                                        No account found with this email. Please{" "}
+                                        <button type="button" onClick={() => switchMode("signup")} className="underline font-semibold hover:text-amber-300">
+                                            sign up first
+                                        </button>.
+                                    </span>
+                                );
+                            }
+                        } catch (e) {
+                            setError("Invalid email or password. Please check your credentials.");
+                        }
+                    } else if (errMsg.includes("email not confirmed") || errMsg.includes("email_not_confirmed")) {
                         setError(
                             <span>
-                                No account found. Please{" "}
-                                <button type="button" onClick={() => switchMode("signup")} className="underline font-semibold hover:text-amber-300">
-                                    sign up to continue
-                                </button>.
+                                Email not confirmed. Please check your inbox and click the verification link to activate your account.
                             </span>
                         );
+
                     } else {
                         setError(signInError.message || `Invalid email or password. ${left} attempt(s) remaining.`);
                     }
@@ -415,10 +475,17 @@ export default function AuthGateway() {
                                     className="w-full bg-white/5 border border-white/10 text-white py-4 rounded-xl text-sm hover:bg-white/10 transition-colors flex items-center justify-center gap-2">
                                     Back to Login <ArrowRight className="w-4 h-4" />
                                 </button>
-                                <p className="text-[10px] text-white/30 mt-4 tracking-wider">
-                                    Redirecting automatically in <span className="text-amber-400">{countdown}s</span>...
+                                {/*
+                                 * Redirecting automatically in 
+                                    <span className="text-amber-400">{countdown}s</span><div styleName={styles['---']}>
+                                    */}
+                                <p className="text-[10px] text-white/50 mt-4 tracking-wider">
+                                    Once you confirm your email, you can log in using the button below.
                                 </p>
+
                             </div>
+
+
                         </motion.div>
                     )}
 
@@ -522,7 +589,7 @@ export default function AuthGateway() {
                                                 {[
                                                     { label: "At least 8 characters", ok: password.length >= 8 },
                                                     { label: "Contains a number", ok: /\d/.test(password) },
-                                                    { label: "Contains a special character", ok: /[!@#$%^&*(),.?":{}|<>]/.test(password) },
+                                                    { label: "Contains a special character", ok: /[!@#$%^&*(),.?":{}|<>_-]/.test(password) },
                                                 ].map(r => (
                                                     <div key={r.label} className="flex items-center gap-2 text-xs">
                                                         {r.ok ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <X className="w-3.5 h-3.5 text-red-500/70" />}
@@ -598,10 +665,10 @@ export default function AuthGateway() {
                             <button onClick={handleGoogleLogin} disabled={loading} type="button"
                                 className="w-full bg-white/5 border border-white/10 text-white font-medium py-3.5 rounded-xl text-sm flex items-center justify-center gap-3 transition-colors disabled:opacity-50 hover:bg-white/10">
                                 <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none">
-                                    <path d="M22.56 12.25C22.56 11.47 22.49 10.72 22.36 10H12V14.26H17.92C17.67 15.63 16.86 16.79 15.69 17.57V20.34H19.26C21.35 18.41 22.56 15.58 22.56 12.25Z" fill="#4285F4"/>
-                                    <path d="M12 23C14.97 23 17.46 22.01 19.26 20.34L15.69 17.57C14.71 18.23 13.46 18.66 12 18.66C9.18 18.66 6.78 16.75 5.91 14.18H2.21V17.05C4.01 20.64 7.72 23 12 23Z" fill="#34A853"/>
-                                    <path d="M5.91 14.18C5.69 13.51 5.56 12.78 5.56 12C5.56 11.22 5.69 10.49 5.91 9.82V6.95H2.21C1.47 8.43 1.04 10.16 1.04 12C1.04 13.84 1.47 15.57 2.21 17.05L5.91 14.18Z" fill="#FBBC05"/>
-                                    <path d="M12 5.34C13.62 5.34 15.07 5.9 16.21 6.99L19.34 3.86C17.46 2.1 14.97 1 12 1C7.72 1 4.01 3.36 2.21 6.95L5.91 9.82C6.78 7.25 9.18 5.34 12 5.34Z" fill="#EA4335"/>
+                                    <path d="M22.56 12.25C22.56 11.47 22.49 10.72 22.36 10H12V14.26H17.92C17.67 15.63 16.86 16.79 15.69 17.57V20.34H19.26C21.35 18.41 22.56 15.58 22.56 12.25Z" fill="#4285F4" />
+                                    <path d="M12 23C14.97 23 17.46 22.01 19.26 20.34L15.69 17.57C14.71 18.23 13.46 18.66 12 18.66C9.18 18.66 6.78 16.75 5.91 14.18H2.21V17.05C4.01 20.64 7.72 23 12 23Z" fill="#34A853" />
+                                    <path d="M5.91 14.18C5.69 13.51 5.56 12.78 5.56 12C5.56 11.22 5.69 10.49 5.91 9.82V6.95H2.21C1.47 8.43 1.04 10.16 1.04 12C1.04 13.84 1.47 15.57 2.21 17.05L5.91 14.18Z" fill="#FBBC05" />
+                                    <path d="M12 5.34C13.62 5.34 15.07 5.9 16.21 6.99L19.34 3.86C17.46 2.1 14.97 1 12 1C7.72 1 4.01 3.36 2.21 6.95L5.91 9.82C6.78 7.25 9.18 5.34 12 5.34Z" fill="#EA4335" />
                                 </svg>
                                 Continue with Google
                             </button>
@@ -633,7 +700,7 @@ export default function AuthGateway() {
                             <div className="w-8 h-8 rounded-lg bg-white/6 border border-white/10 flex items-center justify-center text-[#f2faf5]/90">
                                 {t.icon}
                             </div>
-                            <span className="text-[9px] text-[#f2faf5] text-center leading-tight max-w-[56px]">{t.label}</span>
+                            <span className="text-[9px] text-[#f2faf5] text-center leading-tight ">{t.label}</span>
                         </div>
                     ))}
                 </div>

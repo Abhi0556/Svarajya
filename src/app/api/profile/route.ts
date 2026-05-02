@@ -205,6 +205,7 @@ async function postHandler(request: NextRequest): Promise<NextResponse> {
             yearCompleted: edu.year ? parseInt(edu.year) : null,
             specialization: edu.specialization || null,
             linkedLoanId: edu.hasLoan ? "has_loan" : null,
+            certificateUrl: edu.certificateUrl || null,
           })),
         };
       }
@@ -251,6 +252,7 @@ async function postHandler(request: NextRequest): Promise<NextResponse> {
             yearCompleted: edu.year ? parseInt(edu.year) : null,
             specialization: edu.specialization || null,
             linkedLoanId: edu.hasLoan ? "has_loan" : null,
+            certificateUrl: edu.certificateUrl || null,
           })),
         };
       }
